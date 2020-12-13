@@ -30,9 +30,10 @@ void Grid::setup(Particle& particles) {
 				int idx = i * (ny * nz) + j * nz + k;
 				
 				// generate fluid particles
-				Eigen::Vector3d lower_corner = left_lower_corner + h * Eigen::Vector3d(1. * i, 1. * j, 1. * k);
-				Eigen::MatrixXd q_ = Eigen::MatrixXd::NullaryExpr(8, 3, [&]() { return dist(generator);  });
-				particles.q.block(8 * idx, 0, 8, 3) = (lower_corner + h * q_).transpose();
+				Eigen::RowVector3d lower_corner = left_lower_corner + h * Eigen::Vector3d(i, j, k);
+				Eigen::MatrixXd q_ = Eigen::MatrixXd::NullaryExpr(8, 3, [&]() { return h * dist(generator);  });
+				q_ = q_.rowwise() + lower_corner;
+				particles.q.block(8 * idx, 0, 8, 3) = q_;
 			}
 		}
 	}
