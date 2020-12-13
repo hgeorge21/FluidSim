@@ -2,19 +2,21 @@
 #include <chrono>
 #include <random>
 
+#include <iostream>
+
 void Grid::setup(Particle& particles) {
 	Eigen::Vector3d ns = (right_upper_corner - left_lower_corner) / h;
-	int nx = int(ns(0));
-	int ny = int(ns(1));
-	int nz = int(ns(2));
+	nx = ceil(ns(0));
+	ny = ceil(ns(1));
+	nz = ceil(ns(2));
 
 	// initialization
 	int n_grids = nx * ny * nz;
 	particles.q = Eigen::MatrixXd(8 * n_grids, 3); // each cell has 8 particles
 	particles.v = Eigen::MatrixXd::Zero(8 * n_grids, 3);
-	VX = Eigen::MatrixXd::Zero(n_grids+ny*nz, 3);
-	VY = Eigen::MatrixXd::Zero(n_grids+nx*nz, 3);
-	VZ = Eigen::MatrixXd::Zero(n_grids+nx*ny, 3);
+	Vx = Eigen::VectorXd::Zero(n_grids+ny*nz);
+	Vy = Eigen::VectorXd::Zero(n_grids+nx*nz);
+	Vz = Eigen::VectorXd::Zero(n_grids+nx*ny);
 	pressure = Eigen::VectorXd::Zero(n_grids, 1);
 
 	// set random seed for particle generation

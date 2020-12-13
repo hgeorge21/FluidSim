@@ -10,6 +10,8 @@
 #include <particles.h>
 #include <create_rectangle.h>
 
+#include <transfer_to_grid.h>
+
 int main(int argc, char** argv) {
 	// load mesh
 	Eigen::MatrixXd V;
@@ -23,19 +25,25 @@ int main(int argc, char** argv) {
 	viewer.append_mesh();
 
 	// create grid
-	Grid grid(Eigen::Vector3d(-.5, -.3, -.5), Eigen::Vector3d(.5, -0.2, .5), 0.01);
+	Grid grid(Eigen::Vector3d(-.5, -.3, -.5), Eigen::Vector3d(.5, -0.2, .5), 0.1);
 	Particle particles;
 	grid.setup(particles);
 
-	const auto add_points = [&]() {
-		const Eigen::RowVector3d blue(0.1, 0.35, 0.75);
-		viewer.data_list[xid].set_points(particles.q, (1. - (1. - blue.array()) * .8));
-	};
+
+	transfer_to_grid(grid, particles);
+	
+
+
+
 
 	std::cout << R"(
     )";
 	std::cout << "\n";
 
+	const auto add_points = [&]() {
+		const Eigen::RowVector3d blue(0.1, 0.35, 0.75);
+		viewer.data_list[xid].set_points(particles.q, (1. - (1. - blue.array()) * .8));
+	};
 
 	const auto update = [&]() {};
 
