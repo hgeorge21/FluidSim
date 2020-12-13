@@ -3,7 +3,7 @@
 #include <random>
 
 
-void Grid::setup(Particle& particles, const double& height) {
+void Grid::init() {
 	Eigen::Vector3d ns = (right_upper_corner - left_lower_corner).cwiseQuotient(h);
 	nx = ceil(ns(0));
 	ny = ceil(ns(1));
@@ -14,22 +14,82 @@ void Grid::setup(Particle& particles, const double& height) {
 	pressure = Eigen::VectorXd::Zero(n_grids);
 	markers = Eigen::VectorXi::Zero(n_grids);
 
+	// sets up the selection matrix for the boundaries
+	typedef Eigen::Triplet<double> T;
+	std::vector<T> trip_x, trip_y, trip_z;
+
+	Px.resize((nx + 1) * ny * nz, (nx + 1) * ny * nz);
+	Py.resize(nx * (ny+1) * nz, nx * (ny + 1) * nz);
+	Pz.resize(nx * ny * (nz+1), nx * ny * (nz + 1));
+
+	const auto& set_sparse_vec = [&](const int& dim) {
+		int ll0 = (dim == 0) ? 2 : 0;
+		int ll1 = (dim == 1) ? 2 : 0;
+		int ll2 = (dim == 2) ? 2 : 0;
+		
+		int ul0 = (dim == 0) ? nx - 1 : nx;
+		int ul1 = (dim == 1) ? ny - 1 : ny;
+		int ul2 = (dim == 2) ? nz - 1 : nz;
+
+		int dim0 = (dim == 0) ? nx : nx + 1;
+		int dim1 = (dim == 1) ? ny : ny + 1;
+		int dim2 = (dim == 2) ? nz : nz + 1;
+
+		for (int i = ll0; i < ul0; i++) {
+			for (int j = ll1; j < ul1; j++) {
+				for (int k = ll2; k < ul2; k++) {
+					int idx = i * dim1 * dim2 + j * dim2 + k;
+
+					if (dim == 0)
+						trip_x.emplace_back(T(idx, idx, 1.0));
+					if (dim == 1)
+						trip_y.emplace_back(T(idx, idx, 1.0));
+					if (dim == 2)
+						trip_z.emplace_back(T(idx, idx, 1.0));
+				}
+			}
+		}
+	};
+
+	set_sparse_vec(0);
+	set_sparse_vec(1);
+	set_sparse_vec(2);
+	Px.setFromTriplets(trip_x.begin(), trip_x.end());
+	Py.setFromTriplets(trip_y.begin(), trip_y.end());
+	Pz.setFromTriplets(trip_z.begin(), trip_z.end());
+}
+
+
+void Grid::add_fluid(Particle& particles, const double& height) {
+	Eigen::Vector3d ns = (right_upper_corner - left_lower_corner).cwiseQuotient(h);
+	nx = ceil(ns(0));
+	ny = ceil(ns(1));
+	nz = ceil(ns(2));
+
 	// set random seed for particle generation
 	unsigned seed = std::chrono::system_clock::now().time_since_epoch().count();
 	std::default_random_engine generator(seed);
 	std::uniform_real_distribution<double> dist(0., 1.);
 
+	// the first & last of each dimension is solid only
 	int ny_f = ceil(height / h(1));
-	int n_fluid_grids = nx * ny_f * nz;
+	int nx_f = nx - 2;
+	int nz_f = nz - 2;
+
+	int n_fluid_grids = nx_f * ny_f * nz_f;
 	particles.q = Eigen::MatrixXd(8 * n_fluid_grids, 3); // each cell has 8 particles
 	particles.v = Eigen::MatrixXd::Zero(8 * n_fluid_grids, 3);
-	for (int i = 0; i < nx; i++) {
+	for (int i = 0; i < nx_f; i++) {
 		for (int j = 0; j < ny_f; j++) {
-			for (int k = 0; k < nz; k++) {
-				int idx = i * (ny_f * nz) + j * nz + k;
-				
+			for (int k = 0; k < nz_f; k++) {
+				int idx = i * (ny_f * nz_f) + j * nz_f + k;
+
+				// claim the fluid cells
+				int org_idx = (i + 1) * (ny * nz) + (j + 1) * nz + k + 1;
+				markers(org_idx) = FLUIDCELL;
+
 				// generate fluid particles
-				Eigen::RowVector3d lower_corner = left_lower_corner + h.cwiseProduct(Eigen::Vector3d(i, j, k));
+				Eigen::RowVector3d lower_corner = left_lower_corner + h + h.cwiseProduct(Eigen::Vector3d(i, j, k));
 				Eigen::MatrixXd q_ = Eigen::MatrixXd::NullaryExpr(8, 3, [&]() { return dist(generator);  });
 				q_.col(0) = h(0) * q_.col(0);
 				q_.col(1) = h(1) * q_.col(1);
@@ -40,6 +100,41 @@ void Grid::setup(Particle& particles, const double& height) {
 			}
 		}
 	}
+}
+
+
+
+void Grid::apply_boundary_condition() {
+	int i, j, k;
+	const auto& get_idx = [&](const int& xi, const int& yi, const int& zi) {
+		return xi * ny * nz + yi * nz + zi;
+	};
+
+	// boundary cells
+	for (i = 0; i < nx; i++) {
+		for (j = 0; j < ny; j++) {
+			int k1 = 0; int k2 = nz - 1;
+			markers(get_idx(i, j, k1)) = SOLIDCELL;
+			markers(get_idx(i, j, k2)) = SOLIDCELL;
+		}
+		for (k = 0; k < nz; k++) {
+			int j1 = 0; int j2 = ny - 1;
+			markers(get_idx(i, j1, k)) = SOLIDCELL;
+			markers(get_idx(i, j2, k)) = SOLIDCELL;
+		}
+	}
+	for (k = 0; k < nz; k++) {
+		for (j = 0; j < ny; j++) {
+			int i1 = 0; int i2 = nx - 1;
+			markers(get_idx(i1, j, k)) = SOLIDCELL;
+			markers(get_idx(i2, j, k)) = SOLIDCELL;
+		}
+	}
+
+	// filters out velocity at boundary grids
+	Vx = Px * Vx;
+	Vy = Py * Vy;
+	Vz = Pz * Vz;
 }
 
 

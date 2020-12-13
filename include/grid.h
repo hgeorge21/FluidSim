@@ -2,6 +2,7 @@
 #define GRID_H
 
 #include <Eigen/Core>
+#include <Eigen/Sparse>
 #include <particles.h>
 
 class Grid {
@@ -19,8 +20,9 @@ public:
 	double density;
 	Eigen::VectorXd Vx, Vy, Vz;
 	Eigen::VectorXd pressure; // the pressure at each grid
-	Eigen::VectorXi markers;
+	Eigen::VectorXi markers;  // marks the type of the cell
 
+	Eigen::SparseMatrix<double> Px, Py, Pz; // selection matrix
 	Eigen::VectorXd Vx_, Vy_, Vz_;
 
 	Grid(const Eigen::Vector3d &corner1, const Eigen::Vector3d &corner2, double h_)
@@ -32,8 +34,9 @@ public:
 	{}
 	
 
-	void setup(Particle& particles, const double &height);
-
+	void init();
+	void add_fluid(Particle& particles, const double& height);
+	void apply_boundary_condition();
 	void save_grids();
 
 private:

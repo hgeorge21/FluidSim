@@ -27,11 +27,11 @@ int main(int argc, char** argv) {
 	// igl::read_triangle_mesh((argc > 1 ? argv[1] : "../../../data/bunny.off"), V, F);
 	
 	double dt = 0.01;
-	double height = 0.3;
+	double height = 0.08;
 	Eigen::Vector3d gravity = Eigen::Vector3d(0, -9.8, 0);
 	Eigen::Vector3d h = Eigen::Vector3d(0.01, 0.01, 0.01);
-	Eigen::Vector3d left_lower_corner = Eigen::Vector3d(-0.5, -0.5, -0.5);
-	Eigen::Vector3d right_upper_corner = Eigen::Vector3d(0.5, 0.5, 0.5);
+	Eigen::Vector3d left_lower_corner = Eigen::Vector3d(-0.1, -0.1, -0.1);
+	Eigen::Vector3d right_upper_corner = Eigen::Vector3d(0.1, 0.1, 0.1);
 
 	// for visualizing boundary
 	create_rectangle(left_lower_corner, right_upper_corner, V, F);
@@ -39,24 +39,30 @@ int main(int argc, char** argv) {
 	Particle particles;
 	Grid grid(left_lower_corner, right_upper_corner, h);
 
-	// create grid	
-	grid.setup(particles, height);
+	// create grid
+	grid.init();
+	grid.add_fluid(particles, height);
 
-	
+	// a complete time step
+	{
+		// advection / move
+		advect_velocity(grid, particles, dt);
+		// transfer to grid and save velocity
+		transfer_to_grid(grid, particles);
+		// add gravity
+		add_gravity(grid, particles, gravity, dt);
 
-	// advection / move
-	// advect_velocity(grid, particles, dt);
-	// transfer to grid and save velocity
-	transfer_to_grid(grid, particles);
-	// add gravity
-	add_gravity(grid, particles, gravity, dt);
+		// TODO: compute_distance_to_fluid
+		// TODO: extend_velocity
 
-	// do pressure
+		grid.apply_boundary_condition();
 
+		// TODO: make incompressible
+		// TODO: extend_velocity
 
-
-
-
+		// TODO: get_velocity_update
+		// TODO: update from grid
+	}
 
 	std::cout << R"(
     )";
