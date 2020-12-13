@@ -9,4 +9,5 @@ void interpolate(
     const double h,
     const Eigen::RowVector3d& corner,
     const Eigen::MatrixXd &q,
+    Eigen::VectorXd& sum,
     Eigen::SparseMatrix<double>& W);

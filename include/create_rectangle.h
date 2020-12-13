@@ -3,24 +3,41 @@
 
 #include <Eigen/Core>
 
-void create_rectangle(Eigen::MatrixXd& V, Eigen::MatrixXi &F) {
+void create_rectangle(
+	const Eigen::Vector3d &left_lower_corner,
+	const Eigen::Vector3d &right_upper_corner,
+	Eigen::MatrixXd &V, 
+	Eigen::MatrixXi &F) {
+	
+	double llx = left_lower_corner(0);
+	double lly = left_lower_corner(1);
+	double llz = left_lower_corner(2);
+
+	double ulx = right_upper_corner(0);
+	double uly = right_upper_corner(1);
+	double ulz = right_upper_corner(2);
+
+	double mdx = 0.5 * (llx + ulx);
+	double mdy = 0.5 * (lly + uly);
+	double mdz = 0.5 * (llz + ulz);
+
 	V = Eigen::MatrixXd::Zero(14, 3);
-	V.row(0) << -0.5, -0.3, -0.5;
-	V.row(1) << 0.5, -0.3, -0.5;
-	V.row(2) << 0, 0, -0.5;
-	V.row(3) << -0.5, 0.3, -0.5;
-	V.row(4) << 0.5, 0.3, -0.5;
+	V.row(0) << llx, lly, llz;
+	V.row(1) << ulx, lly, llz;
+	V.row(2) << mdx, mdy, llz;
+	V.row(3) << llx, uly, llz;
+	V.row(4) << ulx, uly, llz;
 
-	V.row(5) << -0.5, -0.3, 0.5;
-	V.row(6) << 0.5, -0.3, 0.5;
-	V.row(7) << 0, 0, 0.5;
-	V.row(8) << -0.5, 0.3, 0.5;
-	V.row(9) << 0.5, 0.3, 0.5;
+	V.row(5) << llx, lly, ulz;
+	V.row(6) << ulx, lly, ulz;
+	V.row(7) << mdx, mdy, ulz;
+	V.row(8) << llx, uly, ulz;
+	V.row(9) << ulx, uly, ulz;
 
-	V.row(10) << 0, 0.3, 0;
-	V.row(11) << 0.5, 0, 0;
-	V.row(12) << 0, -0.3, 0;
-	V.row(13) << -0.5, 0, 0;
+	V.row(10) << mdx, uly, mdz;
+	V.row(11) << ulx, mdy, mdz;
+	V.row(12) << mdx, lly, mdz;
+	V.row(13) << llx, mdy, mdz;
 
 	F = Eigen::MatrixXi(24, 3);
 	F.row(0) << 2, 1, 0;
