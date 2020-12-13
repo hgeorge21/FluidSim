@@ -8,12 +8,14 @@
 #include <random>
 #include <grid.h>
 #include <particles.h>
+#include <create_rectangle.h>
 
 int main(int argc, char** argv) {
 	// load mesh
 	Eigen::MatrixXd V;
 	Eigen::MatrixXi F;
-	igl::read_triangle_mesh((argc > 1 ? argv[1] : "../../../data/bunny.off"), V, F);
+	// igl::read_triangle_mesh((argc > 1 ? argv[1] : "../../../data/bunny.off"), V, F);
+	create_rectangle(V, F);
 
 	igl::opengl::glfw::Viewer viewer;
 	const int xid = viewer.selected_data_index;
@@ -23,7 +25,7 @@ int main(int argc, char** argv) {
 	// create grid
 	Grid grid(Eigen::Vector3d(-.5, -.3, -.5), Eigen::Vector3d(.5, -0.2, .5), 0.01);
 	Particle particles;
-	particles.generate_particles(grid);
+	grid.setup(particles);
 
 	const auto add_points = [&]() {
 		const Eigen::RowVector3d blue(0.1, 0.35, 0.75);

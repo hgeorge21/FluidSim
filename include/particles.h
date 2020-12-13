@@ -2,7 +2,6 @@
 #define PARTICLE_H
 
 #include <Eigen/Core>
-#include <grid.h>
 
 class Particle
 {
@@ -12,8 +11,6 @@ public:
 
 	Particle();
 	~Particle();
-
-	void generate_particles(Grid &grid);
 
 private:
 	
