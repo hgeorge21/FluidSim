@@ -32,7 +32,7 @@ public:
 	{}
 	
 
-	void setup(Particle& particles);
+	void setup(Particle& particles, const double &height);
 
 	void save_grids();
 

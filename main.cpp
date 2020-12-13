@@ -15,32 +15,37 @@
 #include <add_gravity.h>
 
 int main(int argc, char** argv) {
-	// load mesh
-	Eigen::MatrixXd V;
-	Eigen::MatrixXi F;
-	// igl::read_triangle_mesh((argc > 1 ? argv[1] : "../../../data/bunny.off"), V, F);
-	
-	Eigen::Vector3d left_lower_corner = Eigen::Vector3d(-0.5, -0.5, -0.5);
-	Eigen::Vector3d right_upper_corner = Eigen::Vector3d(0.5, 0.5, 0.5);
-
-	create_rectangle(left_lower_corner, right_upper_corner, V, F);
-
 	igl::opengl::glfw::Viewer viewer;
 	const int xid = viewer.selected_data_index;
 	viewer.data().point_size = 2;
 	viewer.append_mesh();
 
-	// create grid
-	Grid grid(Eigen::Vector3d(-.5, -.3, -.5), Eigen::Vector3d(.5, -0.1, .5), 0.01);
-	Particle particles;
-	grid.setup(particles);
 
+	// load mesh
+	Eigen::MatrixXd V;
+	Eigen::MatrixXi F;
+	// igl::read_triangle_mesh((argc > 1 ? argv[1] : "../../../data/bunny.off"), V, F);
+	
 	double dt = 0.01;
-	Eigen::Vector3d gravity;
-	gravity << 0, -9.8, 0;
+	double height = 0.3;
+	Eigen::Vector3d gravity = Eigen::Vector3d(0, -9.8, 0);
+	Eigen::Vector3d h = Eigen::Vector3d(0.01, 0.01, 0.01);
+	Eigen::Vector3d left_lower_corner = Eigen::Vector3d(-0.5, -0.5, -0.5);
+	Eigen::Vector3d right_upper_corner = Eigen::Vector3d(0.5, 0.5, 0.5);
+
+	// for visualizing boundary
+	create_rectangle(left_lower_corner, right_upper_corner, V, F);
+
+	Particle particles;
+	Grid grid(left_lower_corner, right_upper_corner, h);
+
+	// create grid	
+	grid.setup(particles, height);
+
+	
 
 	// advection / move
-	advect_velocity(grid, particles, dt);
+	// advect_velocity(grid, particles, dt);
 	// transfer to grid and save velocity
 	transfer_to_grid(grid, particles);
 	// add gravity
