@@ -6,6 +6,6 @@ void advect_velocity(Grid& grid, Particle& particles, double dt) {
 		particles.q = particles.q + dt * particles.v;
 	}
 	else {
-		// TODO
+		// 2nd Order Runge Kutta method
 	}
 }

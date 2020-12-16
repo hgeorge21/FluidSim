@@ -14,8 +14,8 @@ class Particle
 public:
 	advection_method method;
 
-	Eigen::MatrixXd q;
-	Eigen::MatrixXd v;
+	Eigen::MatrixXd q; // location
+	Eigen::MatrixXd v; // velocity
 
 	Particle();
 	~Particle();

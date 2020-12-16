@@ -4,6 +4,7 @@
 
 
 void Grid::init() {
+	// calculate number of cells in each dimension
 	Eigen::Vector3d ns = (right_upper_corner - left_lower_corner).cwiseQuotient(h);
 	nx = ceil(ns(0));
 	ny = ceil(ns(1));
@@ -19,8 +20,8 @@ void Grid::init() {
 	std::vector<T> trip_x, trip_y, trip_z;
 
 	Px.resize((nx + 1) * ny * nz, (nx + 1) * ny * nz);
-	Py.resize(nx * (ny+1) * nz, nx * (ny + 1) * nz);
-	Pz.resize(nx * ny * (nz+1), nx * ny * (nz + 1));
+	Py.resize(nx * (ny + 1) * nz, nx * (ny + 1) * nz);
+	Pz.resize(nx * ny * (nz + 1), nx * ny * (nz + 1));
 
 	const auto& set_sparse_vec = [&](const int& dim) {
 		int ll0 = (dim == 0) ? 2 : 0;
@@ -72,7 +73,7 @@ void Grid::add_fluid(Particle& particles, const double& height) {
 	std::uniform_real_distribution<double> dist(0., 1.);
 
 	// the first & last of each dimension is solid only
-	int ny_f = ceil(height / h(1));
+	int ny_f = ceil(height / h(1)); //TODO: -2 for solid cell
 	int nx_f = nx - 2;
 	int nz_f = nz - 2;
 
@@ -101,7 +102,6 @@ void Grid::add_fluid(Particle& particles, const double& height) {
 		}
 	}
 }
-
 
 
 void Grid::apply_boundary_condition() {
