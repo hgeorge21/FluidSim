@@ -19,8 +19,9 @@ public:
 	int nx, ny, nz;
 	double density;
 	Eigen::VectorXd Vx, Vy, Vz;
-	Eigen::VectorXd pressure; // the pressure at each grid
-	Eigen::VectorXi markers;  // marks the type of the cell
+	Eigen::VectorXd pressure; // nx1 the pressure at each grid
+	Eigen::VectorXi markers;  // nx1 marks the type of the cell
+	Eigen::VectorXd divergence; // 3nx1 divergence of the each grid
 
 	Eigen::SparseMatrix<double> Px, Py, Pz; // selection matrix
 	Eigen::VectorXd Vx_, Vy_, Vz_;
@@ -33,10 +34,13 @@ public:
 		:left_lower_corner(corner1), right_upper_corner(corner2), h(h_)
 	{}
 	
+	int get_idx(const int& xi, const int& yi, const int& zi);
 
 	void init();
 	void add_fluid(Particle& particles, const double& height);
 	void apply_boundary_condition();
+	void get_divergence();
+	void pressure_projection();
 	void save_grids();
 
 	//// output:

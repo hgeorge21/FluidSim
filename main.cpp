@@ -57,6 +57,7 @@ int main(int argc, char** argv) {
 
 		grid.apply_boundary_condition();
 
+		grid.pressure_projection();
 		// TODO: make incompressible
 		// TODO: extend_velocity
 
