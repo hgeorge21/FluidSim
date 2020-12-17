@@ -6,6 +6,7 @@
 #include <iostream>
 #include <chrono>
 #include <random>
+#include <omp.h>
 
 #include <timer.h>
 #include <grid.h>
@@ -18,6 +19,9 @@
 #include <grid_to_particle.h>
 
 int main(int argc, char** argv) {
+	omp_set_num_threads(8);
+	Eigen::setNbThreads(8);
+
 	igl::opengl::glfw::Viewer viewer;
 	const int airID = viewer.selected_data_index;
 	viewer.data().point_size = 2;
@@ -37,11 +41,11 @@ int main(int argc, char** argv) {
 	// igl::read_triangle_mesh((argc > 1 ? argv[1] : "../../../data/bunny.off"), V, F);
 	
 	double dt = 0.01;
-	double height = 0.08;
+	double height = 0.3;
 	Eigen::Vector3d gravity = Eigen::Vector3d(0, -9.8, 0);
 	Eigen::Vector3d h = Eigen::Vector3d(0.01, 0.01, 0.01);
-	Eigen::Vector3d left_lower_corner = Eigen::Vector3d(-0.5, -0.5, -0.5);
-	Eigen::Vector3d right_upper_corner = Eigen::Vector3d(0.5, 0.5, 0.5);
+	Eigen::Vector3d left_lower_corner = Eigen::Vector3d(-0.2, -0.4, -0.2);
+	Eigen::Vector3d right_upper_corner = Eigen::Vector3d(0.2, 0.4, 0.2);
 
 	// for visualizing boundary
 	create_rectangle(left_lower_corner, right_upper_corner, V, F);
@@ -58,11 +62,8 @@ int main(int argc, char** argv) {
 		double t_before, t_after;
 
 		// advection / move
-		t_before = igl::get_seconds();
 		advect_velocity(grid, particles, dt);
-		t_after = igl::get_seconds();
-		std::cerr << t_after - t_before << "\n";
-		
+
 		// transfer to grid and save velocity
 		t_before = igl::get_seconds();
 		transfer_to_grid(grid, particles);
@@ -70,15 +71,12 @@ int main(int argc, char** argv) {
 		std::cerr << t_after - t_before << "\n";
 		
 		// add gravity
-		t_before = igl::get_seconds();
 		add_gravity(grid, particles, gravity, dt);
-		t_after = igl::get_seconds();
-		std::cerr << t_after - t_before << "\n";
 
 		// TODO: compute_distance_to_fluid
 		// TODO: extend_velocity
 		t_before = igl::get_seconds();
-		grid.apply_boundary_condition();
+		grid.apply_boundary_condition(); // TODO
 		grid.pressure_projection();
 		grid.get_divergence();
 		t_after = igl::get_seconds();
@@ -115,9 +113,8 @@ int main(int argc, char** argv) {
 		switch (key)
 		{
 		case ' ':
-			for (int i = 0; i < 100; i++) {
-				std::cerr << timer(update) << " seconds \n";
-			}
+			std::cerr << "-------------\n";
+			std::cerr << timer(update) << " seconds \n";
 			break;
 		default:
 			return false;

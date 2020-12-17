@@ -35,9 +35,9 @@ void Grid::init() {
 		int ul1 = (dim == 1) ? ny - 1 : ny;
 		int ul2 = (dim == 2) ? nz - 1 : nz;
 
-		int dim0 = (dim == 0) ? nx : nx + 1;
-		int dim1 = (dim == 1) ? ny : ny + 1;
-		int dim2 = (dim == 2) ? nz : nz + 1;
+		int dim0 = (dim == 0) ? nx + 1 : nx;
+		int dim1 = (dim == 1) ? ny + 1 : ny;
+		int dim2 = (dim == 2) ? nz + 1 : nz;
 
 		for (int i = ll0; i < ul0; i++) {
 			for (int j = ll1; j < ul1; j++) {
@@ -235,10 +235,10 @@ void Grid::get_laplacian_operator() {
 	}
 	A.setFromTriplets(trip.begin(), trip.end());
 	// check self-adjoint
-	if (!A.transpose().conjugate().isApprox(A))
-		std::cout << "Warning: Matrix A not self-adjoint" << std::endl;
-	else 
-		std::cout << "Matrix A IS self-adjoint, can switch ConjugateGradient to solve A instead" << std::endl;
+//	if (!A.transpose().conjugate().isApprox(A))
+//		std::cout << "Warning: Matrix A not self-adjoint" << std::endl;
+//	else 
+//		std::cout << "Matrix A IS self-adjoint, can switch ConjugateGradient to solve A instead" << std::endl;
 	//for (int i = 1; i < nx - 2; i++) {
 //	for (int j = 1; j < ny - 2; j++) {
 //		for (int k = 1; k < nz - 2; k++){
@@ -263,8 +263,10 @@ void Grid::get_laplacian_operator() {
 // Solve pressure by Conjugate Gradient Method
 void Grid::solve_pressure() {
 	Eigen::ConjugateGradient<Eigen::SparseMatrix<double>, Eigen::Lower | Eigen::Upper> cg;
+	cg.setTolerance(1e-4);
+
 	// not sure if A is self-adjoint - use AT*A instead
-	cg.compute(A.transpose() * A);
+	cg.compute(A);
 	if (cg.info() != Eigen::Success) {
 		std::cout << "Warning: Conjugate Gradient Solver decomposition failed, given matrix is not self-adjoint" << std::endl;
 	}
