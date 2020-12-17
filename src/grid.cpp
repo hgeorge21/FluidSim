@@ -4,6 +4,7 @@
 
 
 void Grid::init() {
+	// calculate number of cells in each dimension
 	Eigen::Vector3d ns = (right_upper_corner - left_lower_corner).cwiseQuotient(h);
 	nx = ceil(ns(0));
 	ny = ceil(ns(1));
@@ -13,14 +14,15 @@ void Grid::init() {
 	int n_grids = nx * ny * nz;
 	pressure = Eigen::VectorXd::Zero(n_grids);
 	markers = Eigen::VectorXi::Zero(n_grids);
+	divergence = Eigen::VectorXi::Zero(3*n_grids);
 
 	// sets up the selection matrix for the boundaries
 	typedef Eigen::Triplet<double> T;
 	std::vector<T> trip_x, trip_y, trip_z;
 
 	Px.resize((nx + 1) * ny * nz, (nx + 1) * ny * nz);
-	Py.resize(nx * (ny+1) * nz, nx * (ny + 1) * nz);
-	Pz.resize(nx * ny * (nz+1), nx * ny * (nz + 1));
+	Py.resize(nx * (ny + 1) * nz, nx * (ny + 1) * nz);
+	Pz.resize(nx * ny * (nz + 1), nx * ny * (nz + 1));
 
 	const auto& set_sparse_vec = [&](const int& dim) {
 		int ll0 = (dim == 0) ? 2 : 0;
@@ -72,7 +74,7 @@ void Grid::add_fluid(Particle& particles, const double& height) {
 	std::uniform_real_distribution<double> dist(0., 1.);
 
 	// the first & last of each dimension is solid only
-	int ny_f = ceil(height / h(1));
+	int ny_f = ceil(height / h(1)); //TODO: -2 for solid cell
 	int nx_f = nx - 2;
 	int nz_f = nz - 2;
 
@@ -103,12 +105,8 @@ void Grid::add_fluid(Particle& particles, const double& height) {
 }
 
 
-
 void Grid::apply_boundary_condition() {
 	int i, j, k;
-	const auto& get_idx = [&](const int& xi, const int& yi, const int& zi) {
-		return xi * ny * nz + yi * nz + zi;
-	};
 
 	// boundary cells
 	for (i = 0; i < nx; i++) {
@@ -135,6 +133,30 @@ void Grid::apply_boundary_condition() {
 	Vx = Px * Vx;
 	Vy = Py * Vy;
 	Vz = Pz * Vz;
+}
+
+
+int Grid::get_idx(const int& xi, const int& yi, const int& zi) {
+	return xi * ny * nz + yi * nz + zi;
+}
+
+
+void Grid::pressure_projection() {
+	get_divergence();
+	// TODO: implement all
+}
+
+// Get divergence of v
+void Grid::get_divergence() {
+	divergence.setZero();
+	for (int i = 1; i < nx - 1; i++) {
+		for (int j = 1; j < ny - 1; j++) {
+			for (int k = 1; k < nz - 1; k++) {
+				if (markers(get_idx(i, j, k)) == FLUIDCELL)
+					divergence(get_idx(i, j, k)) = Vx(get_idx(i + 1, j, k)) - Vx(get_idx(i, j, k)) + Vy(get_idx(i + 1, j, k)) - Vy(get_idx(i, j, k)) + Vz(get_idx(i + 1, j, k)) - Vz(get_idx(i, j, k));
+			}
+		}
+	}
 }
 
 
