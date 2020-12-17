@@ -39,8 +39,9 @@ public:
 	void init();
 	void add_fluid(Particle& particles, const double& height);
 	void apply_boundary_condition();
-	void get_divergence();
 	void pressure_projection();
+	void get_divergence();
+	void get_gradient();
 	void save_grids();
 
 	//// output:

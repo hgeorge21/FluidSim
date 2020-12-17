@@ -144,6 +144,8 @@ int Grid::get_idx(const int& xi, const int& yi, const int& zi) {
 void Grid::pressure_projection() {
 	get_divergence();
 	// TODO: implement all
+	get_gradient();
+
 }
 
 // Get divergence of v
@@ -153,7 +155,46 @@ void Grid::get_divergence() {
 		for (int j = 1; j < ny - 1; j++) {
 			for (int k = 1; k < nz - 1; k++) {
 				if (markers(get_idx(i, j, k)) == FLUIDCELL)
-					divergence(get_idx(i, j, k)) = Vx(get_idx(i + 1, j, k)) - Vx(get_idx(i, j, k)) + Vy(get_idx(i + 1, j, k)) - Vy(get_idx(i, j, k)) + Vz(get_idx(i + 1, j, k)) - Vz(get_idx(i, j, k));
+					divergence(get_idx(i, j, k)) = (Vx(get_idx(i + 1, j, k))
+					- Vx(get_idx(i, j, k))) / h(0)
+					+ (Vy(get_idx(i + 1, j, k))
+					- Vy(get_idx(i, j, k))) / h(1)
+					+ (Vz(get_idx(i + 1, j, k))
+					- Vz(get_idx(i, j, k))) / h(2);
+			}
+		}
+	}
+}
+
+// Get gradient of p
+void Grid::get_gradient() {
+
+	Eigen::Vector3d inv_h;
+	inv_h << 1.0 / h(0), 1.0 / h(1), 1.0 / h(2);
+	//Eigen::MatrixXd B, D;
+	//B.resize(1, 6);
+	//B << -inv_h(0), inv_h(0), -inv_h(1), inv_h(1), -inv_h(2), inv_h(2);
+	//D.resize(4, 5);
+	//D << -inv_h(0), 0.0, inv_h(0), 0.0, 0.0,
+		//0.0, inv_h(0), -inv_h(0), 0.0, 0.0,
+		//0.0, 0.0, inv_h(1), -inv_h(1), 0.0,
+		//0.0, 0.0, 
+	for (int i = 1; i < nx - 2; i++) {
+		for (int j = 1; j < ny - 2; j++) {
+			for (int k = 1; k < nz - 2; k++){
+				// Either is FLUIDCELL, no SOLIDCELL
+				if ((markers(get_idx(i - 1, j, k)) == FLUIDCELL || markers(get_idx(i, j, k)) == FLUIDCELL) &&
+					(markers(get_idx(i - 1, j, k)) != SOLIDCELL || markers(get_idx(i, j, k)) != SOLIDCELL)) {
+					Vx(get_idx(i, j, k)) += pressure(get_idx(i, j, k)) - pressure(get_idx(i - 1, j, k));
+				}
+				if ((markers(get_idx(i, j-1, k)) == FLUIDCELL || markers(get_idx(i, j, k)) == FLUIDCELL) &&
+					(markers(get_idx(i, j-1, k)) != SOLIDCELL || markers(get_idx(i, j, k)) != SOLIDCELL)) {
+					Vy(get_idx(i, j, k)) += pressure(get_idx(i, j, k)) - pressure(get_idx(i, j - 1, k));
+				}
+				if ((markers(get_idx(i, j, k-1)) == FLUIDCELL || markers(get_idx(i, j, k)) == FLUIDCELL) &&
+					(markers(get_idx(i, j, k-1)) != SOLIDCELL || markers(get_idx(i, j, k)) != SOLIDCELL)) {
+					Vz(get_idx(i, j, k)) += pressure(get_idx(i, j, k)) - pressure(get_idx(i, j, k - 1));
+				}
 			}
 		}
 	}
