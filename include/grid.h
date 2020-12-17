@@ -21,7 +21,7 @@ public:
 	Eigen::VectorXd Vx, Vy, Vz;
 	Eigen::VectorXd pressure; // nx1 the pressure at each grid
 	Eigen::VectorXi markers;  // nx1 marks the type of the cell
-	Eigen::VectorXd divergence; // 3nx1 divergence of the each grid
+	Eigen::VectorXd divergence; // nx1 divergence of the each grid
 	Eigen::VectorXd gradient; // 7nx1 gradient;
 	Eigen::SparseMatrix<double> A;
 
@@ -44,6 +44,7 @@ public:
 	void pressure_projection();
 	void get_divergence();
 	void get_laplacian_operator();
+	void solve_pressure();
 	void save_grids();
 
 	//// output:
