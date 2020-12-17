@@ -1,6 +1,8 @@
 #include <grid.h>
 #include <chrono>
 #include <random>
+#include <iostream>
+#include <Eigen/Eigen/src/IterativeLinearSolvers/ConjugateGradient.h>
 
 
 void Grid::init() {
@@ -11,7 +13,7 @@ void Grid::init() {
 	nz = ceil(ns(2));
 
 	// initialization
-	int n_grids = nx * ny * nz;
+	n_grids = nx * ny * nz;
 	pressure = Eigen::VectorXd::Zero(n_grids);
 	markers = Eigen::VectorXi::Zero(n_grids);
 	divergence = Eigen::VectorXd::Zero(n_grids);
@@ -149,22 +151,128 @@ int Grid::get_idx(const int& xi, const int& yi, const int& zi) {
 
 void Grid::pressure_projection() {
 	get_divergence();
-	// TODO: implement all
+	get_laplacian_operator();
+	solve_pressure();
 }
 
 // Get divergence of v
 void Grid::get_divergence() {
+	divergence.resize(n_grids);
 	divergence.setZero();
 	for (int i = 1; i < nx - 1; i++) {
 		for (int j = 1; j < ny - 1; j++) {
 			for (int k = 1; k < nz - 1; k++) {
 				if (markers(get_idx(i, j, k)) == FLUIDCELL)
-					divergence(get_idx(i, j, k)) = Vx(get_idx(i + 1, j, k)) - Vx(get_idx(i, j, k)) + Vy(get_idx(i + 1, j, k)) - Vy(get_idx(i, j, k)) + Vz(get_idx(i + 1, j, k)) - Vz(get_idx(i, j, k));
+					divergence(get_idx(i, j, k)) = (Vx(get_idx(i + 1, j, k))
+					- Vx(get_idx(i, j, k))) / h(0)
+					+ (Vy(get_idx(i + 1, j, k))
+					- Vy(get_idx(i, j, k))) / h(1)
+					+ (Vz(get_idx(i + 1, j, k))
+					- Vz(get_idx(i, j, k))) / h(2);
 			}
 		}
 	}
 }
 
+// Get laplacian operator - matrix A
+void Grid::get_laplacian_operator() {
+
+	Eigen::Vector3d inv_h;
+	inv_h << 1.0 / pow(h(0), 2), 1.0 / pow(h(1), 2), 1.0 / pow(h(2), 2);
+	//Eigen::MatrixXd B, D, Aj;
+	//B.resize(1, 6);
+	//B << -inv_h(0), inv_h(0), -inv_h(1), inv_h(1), -inv_h(2), inv_h(2);
+	//D.resize(6, 7);
+	//D << -inv_h(0), 0.0, inv_h(0), 0.0, 0.0, 0.0, 0.0,
+	//	0.0, inv_h(0), -inv_h(0), 0.0, 0.0, 0.0, 0.0,
+	//	0.0, 0.0, inv_h(1), -inv_h(1), 0.0, 0.0, 0.0,
+	//	0.0, 0.0, -inv_h(1), 0.0, inv_h(1), 0.0, 0.0,
+	//	0.0, 0.0, inv_h(2), 0.0, 0.0, -inv_h(2), 0.0,
+	//	0.0, 0.0, -inv_h(2), 0.0, 0.0, 0.0, inv_h(2);
+	//
+	//Aj = (B * D);
+	Eigen::RowVectorXd Aj;
+	typedef Eigen::Triplet<double> T;
+	std::vector<T> trip;
+
+	// TODO: Apply Ghost Pressure
+
+	A.resize(n_grids, n_grids);
+	A.setZero();
+	for (int i = 1; i < nx - 1; i++) {
+		for (int j = 1; j < ny - 1; j++) {
+			for (int k = 1; k < nz - 1; k++) {
+				// omit air cell and solid cell
+				int index = get_idx(i, j, k);
+				int index2;
+				if (markers[index] == FLUIDCELL) {
+					index2 = get_idx(i - 1, j, k);
+					if (markers[index2] == FLUIDCELL)
+						trip.push_back(T(index, index2, inv_h(0)));
+
+					index2 = get_idx(i + 1, j, k);
+					if (markers[index2] == FLUIDCELL)
+						trip.push_back(T(index, index2, inv_h(0)));
+
+					index2 = get_idx(i, j - 1, k);
+					if (markers[index2] == FLUIDCELL)
+						trip.push_back(T(index, index2, inv_h(1)));
+
+					index2 = get_idx(i, j + 1, k);
+					if (markers[index2] == FLUIDCELL)
+						trip.push_back(T(index, index2, inv_h(1)));
+
+					index2 = get_idx(i, j, k - 1);
+					if (markers[index2] == FLUIDCELL)
+						trip.push_back(T(index, index2, inv_h(2)));
+
+					index2 = get_idx(i, j, k + 1);
+					if (markers[index2] == FLUIDCELL)
+						trip.push_back(T(index, index2, inv_h(2)));
+				}
+			}
+		}
+	}
+	A.setFromTriplets(trip.begin(), trip.end());
+	// check self-adjoint
+	if (!A.transpose().conjugate().isApprox(A))
+		std::cout << "Warning: Matrix A not self-adjoint" << std::endl;
+	else 
+		std::cout << "Matrix A IS self-adjoint, can switch ConjugateGradient to solve A instead" << std::endl;
+	//for (int i = 1; i < nx - 2; i++) {
+//	for (int j = 1; j < ny - 2; j++) {
+//		for (int k = 1; k < nz - 2; k++){
+//			// Either is FLUIDCELL, no SOLIDCELL
+//			if ((markers(get_idx(i - 1, j, k)) == FLUIDCELL || markers(get_idx(i, j, k)) == FLUIDCELL) &&
+//				(markers(get_idx(i - 1, j, k)) != SOLIDCELL || markers(get_idx(i, j, k)) != SOLIDCELL)) {
+//				Vx(get_idx(i, j, k)) += pressure(get_idx(i, j, k)) - pressure(get_idx(i - 1, j, k));
+//			}
+//			if ((markers(get_idx(i, j-1, k)) == FLUIDCELL || markers(get_idx(i, j, k)) == FLUIDCELL) &&
+//				(markers(get_idx(i, j-1, k)) != SOLIDCELL || markers(get_idx(i, j, k)) != SOLIDCELL)) {
+//				Vy(get_idx(i, j, k)) += pressure(get_idx(i, j, k)) - pressure(get_idx(i, j - 1, k));
+//			}
+//			if ((markers(get_idx(i, j, k-1)) == FLUIDCELL || markers(get_idx(i, j, k)) == FLUIDCELL) &&
+//				(markers(get_idx(i, j, k-1)) != SOLIDCELL || markers(get_idx(i, j, k)) != SOLIDCELL)) {
+//				Vz(get_idx(i, j, k)) += pressure(get_idx(i, j, k)) - pressure(get_idx(i, j, k - 1));
+//			}
+//		}
+//	}
+//}
+}
+
+// Solve pressure by Conjugate Gradient Method
+void Grid::solve_pressure() {
+	Eigen::ConjugateGradient<Eigen::SparseMatrix<double>, Eigen::Lower | Eigen::Upper> cg;
+	// not sure if A is self-adjoint - use AT*A instead
+	cg.compute(A.transpose() * A);
+	if (cg.info() != Eigen::Success) {
+		std::cout << "Warning: Conjugate Gradient Solver decomposition failed, given matrix is not self-adjoint" << std::endl;
+	}
+	pressure = cg.solve(A.transpose() * divergence);
+	if (cg.info() != Eigen::Success) {
+		std::cout << "Warning: Conjugate Gradient Solver solving failed. However decomposition seems work" << std::endl;
+	}
+}
 
 void Grid::save_grids() {
 	Vx_ = Vx;
