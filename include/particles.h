@@ -16,6 +16,7 @@ public:
 
 	Eigen::MatrixXd q; // location
 	Eigen::MatrixXd v; // velocity
+	Eigen::VectorXi type;
 
 	Particle();
 	~Particle();
