@@ -16,6 +16,7 @@ public:
 
 	Eigen::MatrixXd q;
 	Eigen::MatrixXd v;
+	Eigen::VectorXi type;
 
 	Particle();
 	~Particle();
