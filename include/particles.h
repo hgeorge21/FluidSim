@@ -8,8 +8,12 @@ enum advection_method
 	SIMPLE, RUNGE_KUTTA
 };
 
+
 class Particle
 {
+
+#define AIR_P   0
+#define FLUID_P 1
 
 public:
 	advection_method method;

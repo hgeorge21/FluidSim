@@ -14,7 +14,7 @@ void Grid::init() {
 	int n_grids = nx * ny * nz;
 	pressure = Eigen::VectorXd::Zero(n_grids);
 	markers = Eigen::VectorXi::Zero(n_grids);
-	divergence = Eigen::VectorXi::Zero(3*n_grids);
+	divergence = Eigen::VectorXd::Zero(n_grids);
 
 	// sets up the selection matrix for the boundaries
 	typedef Eigen::Triplet<double> T;
@@ -61,7 +61,7 @@ void Grid::init() {
 	Pz.setFromTriplets(trip_z.begin(), trip_z.end());
 }
 
-
+// height is the height of the liquid e.g. water (above height is initialized with air particles
 void Grid::add_fluid(Particle& particles, const double& height) {
 	Eigen::Vector3d ns = (right_upper_corner - left_lower_corner).cwiseQuotient(h);
 	nx = ceil(ns(0));
@@ -74,13 +74,15 @@ void Grid::add_fluid(Particle& particles, const double& height) {
 	std::uniform_real_distribution<double> dist(0., 1.);
 
 	// the first & last of each dimension is solid only
-	int ny_f = ceil(height / h(1)); //TODO: -2 for solid cell
+	int fluid_height = ceil(height / h(1));
+	int ny_f = ny - 2; //TODO: -2 for solid cell
 	int nx_f = nx - 2;
 	int nz_f = nz - 2;
 
 	int n_fluid_grids = nx_f * ny_f * nz_f;
 	particles.q = Eigen::MatrixXd(8 * n_fluid_grids, 3); // each cell has 8 particles
 	particles.v = Eigen::MatrixXd::Zero(8 * n_fluid_grids, 3);
+	particles.type = Eigen::VectorXi::Zero(8 * n_fluid_grids);
 	for (int i = 0; i < nx_f; i++) {
 		for (int j = 0; j < ny_f; j++) {
 			for (int k = 0; k < nz_f; k++) {
@@ -88,7 +90,7 @@ void Grid::add_fluid(Particle& particles, const double& height) {
 
 				// claim the fluid cells
 				int org_idx = (i + 1) * (ny * nz) + (j + 1) * nz + k + 1;
-				markers(org_idx) = FLUIDCELL;
+				markers(org_idx) = (j < fluid_height) ? FLUIDCELL : AIRCELL;
 
 				// generate fluid particles
 				Eigen::RowVector3d lower_corner = left_lower_corner + h + h.cwiseProduct(Eigen::Vector3d(i, j, k));
@@ -99,6 +101,10 @@ void Grid::add_fluid(Particle& particles, const double& height) {
 
 				q_ = q_.rowwise() + lower_corner;
 				particles.q.block(8 * idx, 0, 8, 3) = q_;
+
+				if (j < fluid_height) {
+					particles.type.segment<8>(8 * idx) = FLUID_P * Eigen::VectorXi::Ones(8);
+				}
 			}
 		}
 	}

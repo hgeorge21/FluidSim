@@ -5,6 +5,12 @@
 #include <Eigen/Sparse>
 #include <particles.h>
 
+enum transfer_method {
+	PIC,
+	FLIP
+};
+
+
 class Grid {
 
 #define AIRCELL 0
@@ -12,6 +18,8 @@ class Grid {
 #define SOLIDCELL 2
 
 public:
+	transfer_method method;
+
 	Eigen::Vector3d h;
 	Eigen::Vector3d left_lower_corner;
 	Eigen::Vector3d right_upper_corner;
@@ -26,12 +34,12 @@ public:
 	Eigen::SparseMatrix<double> Px, Py, Pz; // selection matrix
 	Eigen::VectorXd Vx_, Vy_, Vz_;
 
-	Grid(const Eigen::Vector3d &corner1, const Eigen::Vector3d &corner2, double h_)
-		:left_lower_corner(corner1), right_upper_corner(corner2), h(h_ * Eigen::Vector3d::Ones())
+	Grid(const Eigen::Vector3d &corner1, const Eigen::Vector3d &corner2, double h_, transfer_method method_)
+		:left_lower_corner(corner1), right_upper_corner(corner2), h(h_ * Eigen::Vector3d::Ones()), method(method_)
 	{}
 
-	Grid(const Eigen::Vector3d &corner1, const Eigen::Vector3d &corner2, const Eigen::Vector3d &h_)
-		:left_lower_corner(corner1), right_upper_corner(corner2), h(h_)
+	Grid(const Eigen::Vector3d &corner1, const Eigen::Vector3d &corner2, const Eigen::Vector3d &h_, transfer_method method_)
+		:left_lower_corner(corner1), right_upper_corner(corner2), h(h_), method(method_)
 	{}
 	
 	int get_idx(const int& xi, const int& yi, const int& zi);
