@@ -6,6 +6,7 @@
 #include <iostream>
 #include <chrono>
 #include <random>
+#include <thread>
 #include <omp.h>
 
 #include <timer.h>
@@ -99,9 +100,16 @@ int main(int argc, char** argv) {
 		viewer.data_list[fluidID].set_points(fluid_particles, (1. - (1. - blue.array()) * .8));
 	};
 
-	const auto update = [&]() {
+	const auto &update = [&]() {
 		step_update();
 		show_particles();
+	};
+
+	const auto& update_forever = [&]() {
+		while (true) {
+			std::cerr << "===========\n";
+			std::cerr << timer(update) << " seconds\n";
+		}
 	};
 
 	viewer.callback_key_pressed = [&](igl::opengl::glfw::Viewer&, unsigned int key, int mod)
@@ -110,8 +118,8 @@ int main(int argc, char** argv) {
 		{
 		case ' ':
 			for (int i = 0; i < 5; i++) {
-				std::cerr << "-------------\n";
-				std::cerr << timer(update) << " seconds \n";
+				std::cerr << "===========\n";
+				std::cerr << timer(update) << " seconds\n";
 			}
 			break;
 		default:
@@ -120,8 +128,14 @@ int main(int argc, char** argv) {
 		return true;
 	};
 
+	
+
+	std::thread simulation_thread(update_forever);
+	simulation_thread.detach();
+
 	// start the viewer and set the mesh
-	viewer.data().set_mesh(V, F);
+	//viewer.data().set_mesh(V, F);
+	
 	show_particles();
 	viewer.data().show_lines = false;
 	viewer.launch();

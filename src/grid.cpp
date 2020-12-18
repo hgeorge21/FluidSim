@@ -174,22 +174,6 @@ void Grid::pressure_projection() {
 // Get divergence of v
 void Grid::get_divergence() {
 	divergence = Dx * Vx + Dy * Vy + Dz * Vz;
-	/*
-	divergence.resize(n_grids);
-	divergence.setZero();
-	for (int i = 1; i < nx - 1; i++) {
-		for (int j = 1; j < ny - 1; j++) {
-			for (int k = 1; k < nz - 1; k++) {
-				if (markers(get_idx(i, j, k)) == FLUIDCELL)
-					divergence(get_idx(i, j, k)) = (Vx(get_idx(i + 2, j, k))
-					- Vx(get_idx(i + 1, j, k))) / h(0)
-					+ (Vy(get_idx(i + 1, j + 1, k))
-					- Vy(get_idx(i, j + 1, k))) / h(1)
-					+ (Vz(get_idx(i + 1, j, k + 1))
-					- Vz(get_idx(i, j, k + 1))) / h(2);
-			}
-		}
-	}*/
 }
 
 // Get laplacian operator - matrix A
