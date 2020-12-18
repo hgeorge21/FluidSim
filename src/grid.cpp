@@ -140,15 +140,11 @@ void Grid::apply_boundary_condition() {
 }
 
 
-
 void Grid::get_divergence_operator() {
 	divergence_op(nx, ny, nz, 0, h, markers, Dx);
 	divergence_op(nx, ny, nz, 1, h, markers, Dy);
 	divergence_op(nx, ny, nz, 2, h, markers, Dz);
 }
-
-
-
 
 
 int Grid::get_idx(const int& xi, const int& yi, const int& zi) {
@@ -159,17 +155,17 @@ int Grid::get_idx(const int& xi, const int& yi, const int& zi) {
 void Grid::pressure_projection() {
 	get_divergence();
 	solve_pressure();
-
+	update_velocity();
 
 }
-
-
 
 
 // Get divergence of v
 void Grid::get_divergence() {
 	divergence = Dx * Vx + Dy * Vy + Dz * Vz;
+	divergence = 100. * divergence;
 }
+
 
 // Get laplacian operator - matrix A
 void Grid::get_laplacian_operator() {
@@ -228,7 +224,6 @@ void Grid::get_laplacian_operator() {
 }
 
 
-
 // Solve pressure by Conjugate Gradient Method
 void Grid::solve_pressure() {
 	Eigen::ConjugateGradient<Eigen::SparseMatrix<double>, Eigen::Lower | Eigen::Upper> cg;
@@ -242,6 +237,23 @@ void Grid::solve_pressure() {
 	if (cg.info() != Eigen::Success)
 		std::cerr << "Warning: Conjugate Gradient Solver solving failed. However decomposition seems work" << std::endl;
 }
+
+
+void Grid::update_velocity() {
+	get_gradient_operator();
+	// TODO: is this plus or minus?
+	Vx += 0.01 * Gx * pressure;
+	Vy += 0.01 * Gy * pressure;
+	Vz += 0.01 * Gz * pressure;
+}
+
+
+void Grid::get_gradient_operator() {
+	gradient_op(nx, ny, nz, 0, h, markers, Gx);
+	gradient_op(nx, ny, nz, 1, h, markers, Gy);
+	gradient_op(nx, ny, nz, 2, h, markers, Gz);
+}
+
 
 void Grid::save_grids() {
 	Vx_ = Vx;

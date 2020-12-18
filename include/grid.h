@@ -35,6 +35,7 @@ public:
 
 	Eigen::SparseMatrix<double> Px, Py, Pz; // selection matrix
 	Eigen::SparseMatrix<double> Dx, Dy, Dz; // divergence operator
+	Eigen::SparseMatrix<double> Gx, Gy, Gz; // gradient operator
 	Eigen::VectorXd Vx_, Vy_, Vz_;
 
 	Grid(const Eigen::Vector3d &corner1, const Eigen::Vector3d &corner2, double h_, transfer_method method_)
@@ -54,11 +55,13 @@ public:
 	void get_divergence();
 	
 	void solve_pressure();
+	void update_velocity();
 	void save_grids();
 
 private:
 	void get_divergence_operator();
 	void get_laplacian_operator();
+	void get_gradient_operator();
 };
 
 

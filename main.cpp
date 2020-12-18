@@ -35,16 +35,14 @@ int main(int argc, char** argv) {
     )";
 	std::cout << "\n";
 
-
 	// load mesh
 	Eigen::MatrixXd V;
 	Eigen::MatrixXi F;
-	// igl::read_triangle_mesh((argc > 1 ? argv[1] : "../../../data/bunny.off"), V, F);
 	
 	double dt = 0.01;
 	double height = 0.3;
-	Eigen::Vector3d gravity = Eigen::Vector3d(0, -9.8, 0);
 	Eigen::Vector3d h = Eigen::Vector3d(0.025, 0.08, 0.025);
+	Eigen::Vector3d gravity = Eigen::Vector3d(0, -9.8, 0);
 	Eigen::Vector3d left_lower_corner = Eigen::Vector3d(-0.2, -0.4, -0.2);
 	Eigen::Vector3d right_upper_corner = Eigen::Vector3d(0.2, 0.4, 0.2);
 
@@ -64,14 +62,7 @@ int main(int argc, char** argv) {
 
 		// advection / move
 		advect_velocity(grid, particles, dt);
-
-		// transfer to grid and save velocity
-		t_before = igl::get_seconds();
 		transfer_to_grid(grid, particles);
-		t_after = igl::get_seconds();
-		std::cerr << t_after - t_before << "\n";
-		
-		// add gravity
 		add_gravity(grid, particles, gravity, dt);
 
 		t_before = igl::get_seconds();
