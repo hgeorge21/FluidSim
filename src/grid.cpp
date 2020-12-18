@@ -63,6 +63,7 @@ void Grid::init() {
 	Pz.setFromTriplets(trip_z.begin(), trip_z.end());
 }
 
+
 // height is the height of the liquid e.g. water (above height is initialized with air particles
 void Grid::add_fluid(Particle& particles, const double& height) {
 	Eigen::Vector3d ns = (right_upper_corner - left_lower_corner).cwiseQuotient(h);
@@ -144,15 +145,11 @@ void Grid::apply_boundary_condition() {
 }
 
 
-
 void Grid::get_divergence_operator() {
 	divergence_op(nx, ny, nz, 0, h, markers, Dx);
 	divergence_op(nx, ny, nz, 1, h, markers, Dy);
 	divergence_op(nx, ny, nz, 2, h, markers, Dz);
 }
-
-
-
 
 
 int Grid::get_idx(const int& xi, const int& yi, const int& zi) {
@@ -164,17 +161,16 @@ void Grid::pressure_projection() {
 	get_divergence();
 	get_laplacian_operator();
 	solve_pressure();
-
+	update_velocity();
 
 }
-
-
 
 
 // Get divergence of v
 void Grid::get_divergence() {
 	divergence = Dx * Vx + Dy * Vy + Dz * Vz;
 }
+
 
 // Get laplacian operator - matrix A
 void Grid::get_laplacian_operator() {
@@ -254,7 +250,6 @@ void Grid::get_laplacian_operator() {
 }
 
 
-
 // Solve pressure by Conjugate Gradient Method
 void Grid::solve_pressure() {
 	Eigen::ConjugateGradient<Eigen::SparseMatrix<double>, Eigen::Lower | Eigen::Upper> cg;
@@ -265,11 +260,28 @@ void Grid::solve_pressure() {
 	if (cg.info() != Eigen::Success) {
 		std::cout << "Warning: Conjugate Gradient Solver decomposition failed, given matrix is not self-adjoint" << std::endl;
 	}
-	pressure = cg.solve(A.transpose() * divergence);
+	pressure = cg.solve(divergence);
 	if (cg.info() != Eigen::Success) {
 		std::cout << "Warning: Conjugate Gradient Solver solving failed. However decomposition seems work" << std::endl;
 	}
 }
+
+
+void Grid::update_velocity() {
+	get_gradient_operator();
+	Vx = Gx * pressure;
+	Vy = Gy * pressure;
+	Vz = Gz * pressure;
+	std::cout << (Vx.isApprox(Vx_)) << std::endl;
+}
+
+
+void Grid::get_gradient_operator() {
+	gradient_op(nx, ny, nz, 0, h, markers, Gx);
+	gradient_op(nx, ny, nz, 1, h, markers, Gy);
+	gradient_op(nx, ny, nz, 2, h, markers, Gz);
+}
+
 
 void Grid::save_grids() {
 	Vx_ = Vx;
