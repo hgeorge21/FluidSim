@@ -39,7 +39,7 @@ int main(int argc, char** argv) {
 	Eigen::MatrixXd V;
 	Eigen::MatrixXi F;
 	
-	double dt = 1;
+	double dt = 0.3;
 	double height = 0.3;
 	Eigen::Vector3d h = Eigen::Vector3d(0.1, 0.1, 0.1);
 	Eigen::Vector3d gravity = Eigen::Vector3d(0, -0.098, 0);

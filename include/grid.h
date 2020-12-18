@@ -59,6 +59,9 @@ public:
 	void update_velocity();
 	void save_grids();
 
+	void print_pressure();
+	void check_pressure();
+
 private:
 	void get_divergence_operator();
 	void get_laplacian_operator();
