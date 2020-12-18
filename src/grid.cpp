@@ -163,12 +163,12 @@ void Grid::get_divergence() {
 		for (int j = 1; j < ny - 1; j++) {
 			for (int k = 1; k < nz - 1; k++) {
 				if (markers(get_idx(i, j, k)) == FLUIDCELL)
-					divergence(get_idx(i, j, k)) = (Vx(get_idx(i + 1, j, k))
-					- Vx(get_idx(i, j, k))) / h(0)
-					+ (Vy(get_idx(i + 1, j, k))
-					- Vy(get_idx(i, j, k))) / h(1)
-					+ (Vz(get_idx(i + 1, j, k))
-					- Vz(get_idx(i, j, k))) / h(2);
+					divergence(get_idx(i, j, k)) = (Vx(get_idx(i + 2, j, k))
+					- Vx(get_idx(i + 1, j, k))) / h(0)
+					+ (Vy(get_idx(i + 1, j + 1, k))
+					- Vy(get_idx(i, j + 1, k))) / h(1)
+					+ (Vz(get_idx(i + 1, j, k + 1))
+					- Vz(get_idx(i, j, k + 1))) / h(2);
 			}
 		}
 	}
@@ -179,18 +179,7 @@ void Grid::get_laplacian_operator() {
 
 	Eigen::Vector3d inv_h;
 	inv_h << 1.0 / pow(h(0), 2), 1.0 / pow(h(1), 2), 1.0 / pow(h(2), 2);
-	//Eigen::MatrixXd B, D, Aj;
-	//B.resize(1, 6);
-	//B << -inv_h(0), inv_h(0), -inv_h(1), inv_h(1), -inv_h(2), inv_h(2);
-	//D.resize(6, 7);
-	//D << -inv_h(0), 0.0, inv_h(0), 0.0, 0.0, 0.0, 0.0,
-	//	0.0, inv_h(0), -inv_h(0), 0.0, 0.0, 0.0, 0.0,
-	//	0.0, 0.0, inv_h(1), -inv_h(1), 0.0, 0.0, 0.0,
-	//	0.0, 0.0, -inv_h(1), 0.0, inv_h(1), 0.0, 0.0,
-	//	0.0, 0.0, inv_h(2), 0.0, 0.0, -inv_h(2), 0.0,
-	//	0.0, 0.0, -inv_h(2), 0.0, 0.0, 0.0, inv_h(2);
-	//
-	//Aj = (B * D);
+
 	Eigen::RowVectorXd Aj;
 	typedef Eigen::Triplet<double> T;
 	std::vector<T> trip;

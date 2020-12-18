@@ -43,7 +43,7 @@ int main(int argc, char** argv) {
 	double dt = 0.01;
 	double height = 0.3;
 	Eigen::Vector3d gravity = Eigen::Vector3d(0, -9.8, 0);
-	Eigen::Vector3d h = Eigen::Vector3d(0.01, 0.01, 0.01);
+	Eigen::Vector3d h = Eigen::Vector3d(0.05, 0.05, 0.05);
 	Eigen::Vector3d left_lower_corner = Eigen::Vector3d(-0.2, -0.4, -0.2);
 	Eigen::Vector3d right_upper_corner = Eigen::Vector3d(0.2, 0.4, 0.2);
 
