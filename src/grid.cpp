@@ -30,22 +30,21 @@ void Grid::init() {
 	Pz.resize(nx * ny * (nz + 1), nx * ny * (nz + 1));
 
 	const auto& set_sparse_vec = [&](const int& dim) {
-		int ll0 = (dim == 0) ? 2 : 0;
-		int ll1 = (dim == 1) ? 2 : 0;
-		int ll2 = (dim == 2) ? 2 : 0;
-		
-		int ul0 = (dim == 0) ? nx - 1 : nx;
-		int ul1 = (dim == 1) ? ny - 1 : ny;
-		int ul2 = (dim == 2) ? nz - 1 : nz;
+		int ll0 = (dim == 0) ? 1 : 0; // 1 or 2??
+		int ll1 = (dim == 1) ? 1 : 0;
+		int ll2 = (dim == 2) ? 1 : 0;
+		int ul0 = (dim == 0) ? nx : nx; // nx-1 or nx ??
+		int ul1 = (dim == 1) ? ny : ny;
+		int ul2 = (dim == 2) ? nz : nz;
+		int dim0 = (dim == 0) ? nx : nx;
+		int dim1 = (dim == 1) ? ny : ny;
+		int dim2 = (dim == 2) ? nz : nz;
 
-		int dim0 = (dim == 0) ? nx + 1 : nx;
-		int dim1 = (dim == 1) ? ny + 1 : ny;
-		int dim2 = (dim == 2) ? nz + 1 : nz;
 
 		for (int i = ll0; i < ul0; i++)
 			for (int j = ll1; j < ul1; j++)
 				for (int k = ll2; k < ul2; k++) {
-					int idx = i * dim1 * dim2 + j * dim2 + k;
+					int idx = i * ny* nz + j * nz + k;
 
 					if (dim == 0)
 						trip_x.emplace_back(T(idx, idx, 1.0));
@@ -87,7 +86,7 @@ void Grid::add_fluid(Particle& particles, const double& height) {
 				int idx = i * (ny_f * nz_f) + j * nz_f + k;
 
 				// claim the fluid cells
-				int org_idx = (i + 1) * (ny * nz) + (j + 1) * nz + k + 1;
+				int org_idx = (i + 1) * ny * nz + (j + 1) * nz + k + 1;
 				markers(org_idx) = (j < fluid_height) ? FLUIDCELL : AIRCELL;
 
 				// generate fluid particles
@@ -111,18 +110,37 @@ void Grid::add_fluid(Particle& particles, const double& height) {
 
 void Grid::apply_boundary_condition() {
 	int i, j, k;
+	int id;
 
 	// boundary cells
 	for (i = 0; i < nx; i++) {
 		for (j = 0; j < ny; j++) {
-			int k1 = 0; int k2 = nz - 1;
+			int k1 = 0; int k2 = nz-1;
 			markers(get_idx(i, j, k1)) = SOLIDCELL;
 			markers(get_idx(i, j, k2)) = SOLIDCELL;
+
+			//id = i * ny * nz + j * nz + 0;
+			//Vz(id) = 0;
+			//id = i * ny * nz + j * nz + 1;
+			//Vz(id) = 0;
+			//id = i * ny * nz + j * nz + nz;
+			//Vz(id) = 0;
+			//id = i * ny * nz + j * nz + (nz-1);
+			//Vz(id) = 0;
 		}
 		for (k = 0; k < nz; k++) {
 			int j1 = 0; int j2 = ny - 1;
 			markers(get_idx(i, j1, k)) = SOLIDCELL;
 			markers(get_idx(i, j2, k)) = SOLIDCELL;
+
+			//id = i * ny * nz + 0 * nz + k;
+			//Vy(id) = 0;
+			//id = i * ny * nz + 1 * nz + k;
+			//Vy(id) = 0;
+			//id = i * ny * nz + ny * nz + k;
+			//Vy(id) = 0;
+			//id = i * ny * nz + (ny-1) * nz + k;
+			//Vy(id) = 0;
 		}
 	}
 	for (k = 0; k < nz; k++) {
@@ -130,6 +148,15 @@ void Grid::apply_boundary_condition() {
 			int i1 = 0; int i2 = nx - 1;
 			markers(get_idx(i1, j, k)) = SOLIDCELL;
 			markers(get_idx(i2, j, k)) = SOLIDCELL;
+
+			//id = 0 * ny * nz + j * nz + k;
+			//Vx(id) = 0;
+			//id = 1 * ny * nz + j * nz + k;
+			//Vx(id) = 0;
+			//id = nx * ny * nz + j * nz + k;
+			//Vx(id) = 0;
+			//id = (nx-1) * ny * nz + j * nz + k;
+			//Vx(id) = 0;
 		}
 	}
 

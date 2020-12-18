@@ -66,7 +66,27 @@ int main(int argc, char** argv) {
 		add_gravity(grid, particles, gravity, dt);
 
 		t_before = igl::get_seconds();
-		grid.apply_boundary_condition(); // TODO
+		grid.apply_boundary_condition();
+
+
+		for (int i = 0; i < grid.nx; i++) {
+			for (int j = 0; j < grid.ny; j++) {
+				for (int k = 0; k < grid.nz; k++) {
+					int marker = grid.markers(i * grid.ny * grid.nz + j * grid.nz + k);
+					if(marker == SOLIDCELL)
+						std::cout << i << " " << j << " " << k << "\n";
+				}
+			}
+		}
+
+
+
+
+
+
+
+
+
 		grid.pressure_projection();
 		grid.get_divergence();
 		t_after = igl::get_seconds();
@@ -108,7 +128,7 @@ int main(int argc, char** argv) {
 		switch (key)
 		{
 		case ' ':
-			for (int i = 0; i < 5; i++) {
+			for (int i = 0; i < 1; i++) {
 				std::cerr << "===========\n";
 				std::cerr << timer(update) << " seconds\n";
 			}
