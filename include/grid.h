@@ -27,10 +27,10 @@ public:
 	int nx, ny, nz, n_grids;
 	double density;
 	Eigen::VectorXd Vx, Vy, Vz;
-	Eigen::VectorXd pressure; // nx1 the pressure at each grid
-	Eigen::VectorXi markers;  // nx1 marks the type of the cell
+	Eigen::VectorXd pressure;   // nx1 the pressure at each grid
+	Eigen::VectorXi markers;    // nx1 marks the type of the cell
 	Eigen::VectorXd divergence; // nx1 divergence of the each grid
-	Eigen::VectorXd gradient; // 7nx1 gradient;
+	Eigen::VectorXd gradient;   // 7nx1 gradient;
 	Eigen::SparseMatrix<double> A;
 
 	Eigen::SparseMatrix<double> Px, Py, Pz; // selection matrix
