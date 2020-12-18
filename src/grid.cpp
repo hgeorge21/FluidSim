@@ -27,12 +27,12 @@ void Grid::init() {
 	Pz.resize(nx * ny * (nz + 1), nx * ny * (nz + 1));
 
 	const auto& set_sparse_vec = [&](const int& dim) {
-		int ll0 = (dim == 0) ? 1 : 0; // 1 or 2??
-		int ll1 = (dim == 1) ? 1 : 0;
-		int ll2 = (dim == 2) ? 1 : 0;
-		int ul0 = (dim == 0) ? nx : nx; // nx-1 or nx ??
-		int ul1 = (dim == 1) ? ny : ny;
-		int ul2 = (dim == 2) ? nz : nz;
+		int ll0 = (dim == 0) ? 2 : 0; // 1 or 2??
+		int ll1 = (dim == 1) ? 2 : 0;
+		int ll2 = (dim == 2) ? 2 : 0;
+		int ul0 = (dim == 0) ? nx-1 : nx; // nx-1 or nx ??
+		int ul1 = (dim == 1) ? ny-1 : ny;
+		int ul2 = (dim == 2) ? nz-1 : nz;
 		int dim0 = (dim == 0) ? nx+1 : nx;
 		int dim1 = (dim == 1) ? ny+1 : ny;
 		int dim2 = (dim == 2) ? nz+1 : nz;
@@ -61,44 +61,45 @@ void Grid::init() {
 }
 
 
-void Grid::add_fluid(Particle& particles, const double& height) {
+void Grid::add_fluid(Particle& particles, const Eigen::Vector3d &v1, const Eigen::Vector3d &v2, const Eigen::Vector3d &hf, const double& height) {
+	// calculate for fluids
+	Eigen::Vector3d ns = (v2 - v1).cwiseQuotient(hf);
+	int nx_ = ceil(ns(0));
+	int ny_ = ceil(ns(1));
+	int nz_ = ceil(ns(2));
+
+	int n_per_cell = 3;
+	
 	// set random seed for particle generation
 	unsigned seed = std::chrono::system_clock::now().time_since_epoch().count();
 	std::default_random_engine generator(seed);
 	std::uniform_real_distribution<double> dist(0., 1.);
 
 	// the first & last of each dimension is solid only
-	int fluid_height = ceil(height / h(1));
-	int ny_f = ny - 2;
-	int nx_f = nx - 2;
-	int nz_f = nz - 2;
+	int fluid_height = ceil(height / hf(1));
+	int ny_f = ny_ - 2;
+	int nx_f = nx_ - 2;
+	int nz_f = nz_ - 2;
 
 	int n_fluid_grids = nx_f * ny_f * nz_f;
-	particles.q = Eigen::MatrixXd(8 * n_fluid_grids, 3); // each cell has 8 particles
-	particles.v = Eigen::MatrixXd::Zero(8 * n_fluid_grids, 3);
-	particles.type = Eigen::VectorXi::Zero(8 * n_fluid_grids);
+	particles.q = Eigen::MatrixXd(n_per_cell * n_fluid_grids, 3); // each cell has 8 particles
+	particles.v = Eigen::MatrixXd::Zero(n_per_cell * n_fluid_grids, 3);
+	particles.type = Eigen::VectorXi::Zero(n_per_cell * n_fluid_grids);
 	for (int i = 0; i < nx_f; i++) {
 		for (int j = 0; j < ny_f; j++) {
 			for (int k = 0; k < nz_f; k++) {
 				int idx = i * (ny_f * nz_f) + j * nz_f + k;
 
-				// claim the fluid cells
-				int org_idx = (i + 1) * ny * nz + (j + 1) * nz + k + 1;
-				markers(org_idx) = FLUIDCELL; // (j < fluid_height) ? FLUIDCELL : AIRCELL;
-
 				// generate fluid particles
-				Eigen::RowVector3d lower_corner = left_lower_corner + h + h.cwiseProduct(Eigen::Vector3d(i, j, k));
-				Eigen::MatrixXd q_ = Eigen::MatrixXd::NullaryExpr(8, 3, [&]() { return dist(generator);  });
+				Eigen::RowVector3d lower_corner = v1 + h + hf.cwiseProduct(Eigen::Vector3d(i, j, k));
+				Eigen::MatrixXd q_ = Eigen::MatrixXd::NullaryExpr(n_per_cell, 3, [&]() { return dist(generator);  });
 				q_.col(0) = h(0) * q_.col(0);
 				q_.col(1) = h(1) * q_.col(1);
 				q_.col(2) = h(2) * q_.col(2);
 
 				q_ = q_.rowwise() + lower_corner;
-				particles.q.block(8 * idx, 0, 8, 3) = q_;
-
-				//if (j < fluid_height) {
-					particles.type.segment<8>(8 * idx) = FLUID_P * Eigen::VectorXi::Ones(8);
-				//}
+				particles.q.block(n_per_cell * idx, 0, n_per_cell, 3) = q_;
+				particles.type.block(n_per_cell * idx, 0, n_per_cell, 1) = FLUID_P * Eigen::VectorXi::Ones(n_per_cell);
 			}
 		}
 	}
@@ -115,29 +116,11 @@ void Grid::apply_boundary_condition() {
 			int k1 = 0; int k2 = nz-1;
 			markers(get_idx(i, j, k1)) = SOLIDCELL;
 			markers(get_idx(i, j, k2)) = SOLIDCELL;
-
-			//id = i * ny * nz + j * nz + 0;
-			//Vz(id) = 0;
-			//id = i * ny * nz + j * nz + 1;
-			//Vz(id) = 0;
-			//id = i * ny * nz + j * nz + nz;
-			//Vz(id) = 0;
-			//id = i * ny * nz + j * nz + (nz-1);
-			//Vz(id) = 0;
 		}
 		for (k = 0; k < nz; k++) {
 			int j1 = 0; int j2 = ny - 1;
 			markers(get_idx(i, j1, k)) = SOLIDCELL;
 			markers(get_idx(i, j2, k)) = SOLIDCELL;
-
-			//id = i * ny * nz + 0 * nz + k;
-			//Vy(id) = 0;
-			//id = i * ny * nz + 1 * nz + k;
-			//Vy(id) = 0;
-			//id = i * ny * nz + ny * nz + k;
-			//Vy(id) = 0;
-			//id = i * ny * nz + (ny-1) * nz + k;
-			//Vy(id) = 0;
 		}
 	}
 	for (k = 0; k < nz; k++) {
@@ -145,15 +128,6 @@ void Grid::apply_boundary_condition() {
 			int i1 = 0; int i2 = nx - 1;
 			markers(get_idx(i1, j, k)) = SOLIDCELL;
 			markers(get_idx(i2, j, k)) = SOLIDCELL;
-
-			//id = 0 * ny * nz + j * nz + k;
-			//Vx(id) = 0;
-			//id = 1 * ny * nz + j * nz + k;
-			//Vx(id) = 0;
-			//id = nx * ny * nz + j * nz + k;
-			//Vx(id) = 0;
-			//id = (nx-1) * ny * nz + j * nz + k;
-			//Vx(id) = 0;
 		}
 	}
 
@@ -189,7 +163,7 @@ void Grid::pressure_projection() {
 // Get divergence of v
 void Grid::get_divergence() {
 	divergence = Dx * Vx + Dy * Vy + Dz * Vz;
-	divergence = divergence;
+	divergence = (1. / dt) * divergence;
 }
 
 
@@ -243,10 +217,10 @@ void Grid::get_laplacian_operator() {
 	}
 	A.setFromTriplets(trip.begin(), trip.end());
 	// check self-adjoint
-	// if (!A.transpose().conjugate().isApprox(A))
-	//	std::cout << "Warning: Matrix A not self-adjoint" << std::endl;
-	// else 
-	//	std::cout << "Matrix A IS self-adjoint, can switch ConjugateGradient to solve A instead" << std::endl;
+	if (!A.transpose().conjugate().isApprox(A))
+		std::cout << "Warning: Matrix A not self-adjoint" << std::endl;
+	else 
+		std::cout << "Matrix A IS self-adjoint, can switch ConjugateGradient to solve A instead" << std::endl;
 }
 
 
@@ -256,10 +230,10 @@ void Grid::solve_pressure() {
 	cg.setTolerance(1e-8);
 
 	// not sure if A is self-adjoint - use AT*A instead
-	cg.compute(A);
+	cg.compute(A.transpose() * A);
 	if (cg.info() != Eigen::Success)
 		std::cerr << "Warning: Conjugate Gradient Solver decomposition failed, given matrix is not self-adjoint" << std::endl;
-	pressure = cg.solve(divergence);
+	pressure = cg.solve(A.transpose() * divergence);
 	if (cg.info() != Eigen::Success)
 		std::cerr << "Warning: Conjugate Gradient Solver solving failed. However decomposition seems work" << std::endl;
 }
@@ -268,9 +242,9 @@ void Grid::solve_pressure() {
 void Grid::update_velocity() {
 	get_gradient_operator();
 	// TODO: is this plus or minus?
-	Vx -= Gx * pressure;
-	Vy -= Gy * pressure;
-	Vz -= Gz * pressure;
+	Vx += dt * Gx * pressure;
+	Vy += dt * Gy * pressure;
+	Vz += dt * Gz * pressure;
 }
 
 

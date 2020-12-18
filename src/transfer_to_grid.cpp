@@ -26,7 +26,7 @@ void transfer_to_grid(Grid &grid, Particle &particles) {
 	grid.Vz = Wz.transpose() * particles.v.col(2);
 	grid.Vz = (grid.Vz).cwiseQuotient(sum);
 
-	// TODO: need revision
+	// TODO: need revision to account for aircell
 	for (int n = 0; n < particles.q.rows(); n++) {
 		Eigen::RowVector3d x = particles.q.row(n) - grid.left_lower_corner.transpose();
 		Eigen::RowVector3d d = x.cwiseQuotient(h);

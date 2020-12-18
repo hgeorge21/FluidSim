@@ -18,6 +18,7 @@ class Grid {
 #define SOLIDCELL 2
 
 public:
+	double dt;
 	transfer_method method;
 
 	Eigen::Vector3d h;
@@ -38,18 +39,18 @@ public:
 	Eigen::SparseMatrix<double> Gx, Gy, Gz; // gradient operator
 	Eigen::VectorXd Vx_, Vy_, Vz_;
 
-	Grid(const Eigen::Vector3d &corner1, const Eigen::Vector3d &corner2, double h_, transfer_method method_)
-		:left_lower_corner(corner1), right_upper_corner(corner2), h(h_ * Eigen::Vector3d::Ones()), method(method_)
+	Grid(double dt_, const Eigen::Vector3d &corner1, const Eigen::Vector3d &corner2, double h_, transfer_method method_)
+		:dt(dt_), left_lower_corner(corner1), right_upper_corner(corner2), h(h_ * Eigen::Vector3d::Ones()), method(method_)
 	{}
 
-	Grid(const Eigen::Vector3d &corner1, const Eigen::Vector3d &corner2, const Eigen::Vector3d &h_, transfer_method method_)
-		:left_lower_corner(corner1), right_upper_corner(corner2), h(h_), method(method_)
+	Grid(double dt_, const Eigen::Vector3d &corner1, const Eigen::Vector3d &corner2, const Eigen::Vector3d &h_, transfer_method method_)
+		:dt(dt_), left_lower_corner(corner1), right_upper_corner(corner2), h(h_), method(method_)
 	{}
 	
 	int get_idx(const int& xi, const int& yi, const int& zi);
 
 	void init();
-	void add_fluid(Particle& particles, const double& height);
+	void add_fluid(Particle& particles, const Eigen::Vector3d& v1, const Eigen::Vector3d& v2, const Eigen::Vector3d& hf, const double& height);
 	void apply_boundary_condition();
 	void pressure_projection();
 	void get_divergence();

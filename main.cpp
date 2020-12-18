@@ -41,20 +41,20 @@ int main(int argc, char** argv) {
 	
 	double dt = 1;
 	double height = 0.3;
-	Eigen::Vector3d h = Eigen::Vector3d(0.025, 0.08, 0.025);
+	Eigen::Vector3d h = Eigen::Vector3d(0.1, 0.1, 0.1);
 	Eigen::Vector3d gravity = Eigen::Vector3d(0, -0.098, 0);
-	Eigen::Vector3d left_lower_corner = Eigen::Vector3d(-0.2, -0.4, -0.2);
-	Eigen::Vector3d right_upper_corner = Eigen::Vector3d(0.2, 0.4, 0.2);
+	Eigen::Vector3d left_lower_corner = Eigen::Vector3d(-1., -1., -1.);
+	Eigen::Vector3d right_upper_corner = Eigen::Vector3d(1., 1., 1.);
 
 	// for visualizing boundary
 	create_rectangle(left_lower_corner, right_upper_corner, V, F);
 
 	Particle particles;
-	Grid grid(left_lower_corner, right_upper_corner, h, FLIP);
+	Grid grid(dt, left_lower_corner, right_upper_corner, h, FLIP);
 
 	// create grid
 	grid.init();
-	grid.add_fluid(particles, height);
+	grid.add_fluid(particles, Eigen::Vector3d(-0.5, -1, -0.5), Eigen::Vector3d(0.5, 0.5, 0.5), Eigen::Vector3d(0.05, 0.05, 0.05), height);
 
 	// a complete time step
 	const auto& step_update = [&]() {
