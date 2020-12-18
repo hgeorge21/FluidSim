@@ -18,9 +18,6 @@ void Grid::init() {
 	markers = Eigen::VectorXi::Zero(n_grids);
 	divergence = Eigen::VectorXd::Zero(n_grids);
 
-	get_divergence_operator();
-	get_laplacian_operator();
-
 	// sets up the selection matrix for the boundaries
 	typedef Eigen::Triplet<double> T;
 	std::vector<T> trip_x, trip_y, trip_z;
@@ -36,15 +33,15 @@ void Grid::init() {
 		int ul0 = (dim == 0) ? nx : nx; // nx-1 or nx ??
 		int ul1 = (dim == 1) ? ny : ny;
 		int ul2 = (dim == 2) ? nz : nz;
-		int dim0 = (dim == 0) ? nx : nx;
-		int dim1 = (dim == 1) ? ny : ny;
-		int dim2 = (dim == 2) ? nz : nz;
+		int dim0 = (dim == 0) ? nx+1 : nx;
+		int dim1 = (dim == 1) ? ny+1 : ny;
+		int dim2 = (dim == 2) ? nz+1 : nz;
 
 
 		for (int i = ll0; i < ul0; i++)
 			for (int j = ll1; j < ul1; j++)
 				for (int k = ll2; k < ul2; k++) {
-					int idx = i * ny* nz + j * nz + k;
+					int idx = i * dim1* dim2 + j * dim2 + k;
 
 					if (dim == 0)
 						trip_x.emplace_back(T(idx, idx, 1.0));
@@ -87,7 +84,7 @@ void Grid::add_fluid(Particle& particles, const double& height) {
 
 				// claim the fluid cells
 				int org_idx = (i + 1) * ny * nz + (j + 1) * nz + k + 1;
-				markers(org_idx) = (j < fluid_height) ? FLUIDCELL : AIRCELL;
+				markers(org_idx) = FLUIDCELL; // (j < fluid_height) ? FLUIDCELL : AIRCELL;
 
 				// generate fluid particles
 				Eigen::RowVector3d lower_corner = left_lower_corner + h + h.cwiseProduct(Eigen::Vector3d(i, j, k));
@@ -99,9 +96,9 @@ void Grid::add_fluid(Particle& particles, const double& height) {
 				q_ = q_.rowwise() + lower_corner;
 				particles.q.block(8 * idx, 0, 8, 3) = q_;
 
-				if (j < fluid_height) {
+				//if (j < fluid_height) {
 					particles.type.segment<8>(8 * idx) = FLUID_P * Eigen::VectorXi::Ones(8);
-				}
+				//}
 			}
 		}
 	}
@@ -180,17 +177,19 @@ int Grid::get_idx(const int& xi, const int& yi, const int& zi) {
 
 
 void Grid::pressure_projection() {
+	get_divergence_operator();
+	get_laplacian_operator();
+
 	get_divergence();
 	solve_pressure();
 	update_velocity();
-
 }
 
 
 // Get divergence of v
 void Grid::get_divergence() {
 	divergence = Dx * Vx + Dy * Vy + Dz * Vz;
-	divergence = 100. * divergence;
+	divergence = divergence;
 }
 
 
@@ -260,7 +259,7 @@ void Grid::solve_pressure() {
 	cg.compute(A);
 	if (cg.info() != Eigen::Success)
 		std::cerr << "Warning: Conjugate Gradient Solver decomposition failed, given matrix is not self-adjoint" << std::endl;
-	pressure = cg.solve(A.transpose() * divergence);
+	pressure = cg.solve(divergence);
 	if (cg.info() != Eigen::Success)
 		std::cerr << "Warning: Conjugate Gradient Solver solving failed. However decomposition seems work" << std::endl;
 }
@@ -269,9 +268,9 @@ void Grid::solve_pressure() {
 void Grid::update_velocity() {
 	get_gradient_operator();
 	// TODO: is this plus or minus?
-	Vx += 0.01 * Gx * pressure;
-	Vy += 0.01 * Gy * pressure;
-	Vz += 0.01 * Gz * pressure;
+	Vx -= Gx * pressure;
+	Vy -= Gy * pressure;
+	Vz -= Gz * pressure;
 }
 
 

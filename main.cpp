@@ -39,10 +39,10 @@ int main(int argc, char** argv) {
 	Eigen::MatrixXd V;
 	Eigen::MatrixXi F;
 	
-	double dt = 0.01;
+	double dt = 1;
 	double height = 0.3;
 	Eigen::Vector3d h = Eigen::Vector3d(0.025, 0.08, 0.025);
-	Eigen::Vector3d gravity = Eigen::Vector3d(0, -9.8, 0);
+	Eigen::Vector3d gravity = Eigen::Vector3d(0, -0.098, 0);
 	Eigen::Vector3d left_lower_corner = Eigen::Vector3d(-0.2, -0.4, -0.2);
 	Eigen::Vector3d right_upper_corner = Eigen::Vector3d(0.2, 0.4, 0.2);
 
@@ -65,37 +65,14 @@ int main(int argc, char** argv) {
 		transfer_to_grid(grid, particles);
 		add_gravity(grid, particles, gravity, dt);
 
-		t_before = igl::get_seconds();
 		grid.apply_boundary_condition();
 
-
-		for (int i = 0; i < grid.nx; i++) {
-			for (int j = 0; j < grid.ny; j++) {
-				for (int k = 0; k < grid.nz; k++) {
-					int marker = grid.markers(i * grid.ny * grid.nz + j * grid.nz + k);
-					if(marker == SOLIDCELL)
-						std::cout << i << " " << j << " " << k << "\n";
-				}
-			}
-		}
-
-
-
-
-
-
-
-
-
+		t_before = igl::get_seconds();
 		grid.pressure_projection();
-		grid.get_divergence();
 		t_after = igl::get_seconds();
 		std::cerr << t_after - t_before << "\n";
 		
-		t_before = igl::get_seconds();
 		grid_to_particle_velocity_update(grid, particles);
-		t_after = igl::get_seconds();
-		std::cerr << t_after - t_before << "\n";
 	};
 
 
@@ -141,11 +118,11 @@ int main(int argc, char** argv) {
 
 	
 
-	std::thread simulation_thread(update_forever);
-	simulation_thread.detach();
+	//std::thread simulation_thread(update_forever);
+	//simulation_thread.detach();
 
 	// start the viewer and set the mesh
-	//viewer.data().set_mesh(V, F);
+	viewer.data().set_mesh(V, F);
 	
 	show_particles();
 	viewer.data().show_lines = false;

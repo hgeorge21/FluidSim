@@ -41,19 +41,18 @@ void interpolate(
         d(dim) = std::min(d(dim), 1.0);
         
         i = int(ids(0)); j = int(ids(1)); k = int(ids(2));
-
-        int ind = i * ny * nz + j * nz + k;
+        int ind = i * dim1 * dim2 + j * dim2 + k;
 
         trilinear_interpolation(d, w);
 
-        trip.emplace_back(T(l, ind,                    w(0)));
-        trip.emplace_back(T(l, ind + ny*nz,            w(1)));
-        trip.emplace_back(T(l, ind + nz,               w(2)));
-        trip.emplace_back(T(l, ind + ny*nz + nz,       w(3)));
-        trip.emplace_back(T(l, ind + 1,                w(4)));
-        trip.emplace_back(T(l, ind + nz * ny + 1,      w(5)));
-        trip.emplace_back(T(l, ind + nz + 1,           w(6)));
-        trip.emplace_back(T(l, ind + nz + nz * ny + 1, w(7)));
+        trip.emplace_back(T(l, ind, w(0)));
+        trip.emplace_back(T(l, ind + dim1 * dim2, w(1)));
+        trip.emplace_back(T(l, ind + dim2, w(2)));
+        trip.emplace_back(T(l, ind + dim1 * dim2 + dim2, w(3)));
+        trip.emplace_back(T(l, ind + 1, w(4)));
+        trip.emplace_back(T(l, ind + dim1 * dim2 + 1, w(5)));
+        trip.emplace_back(T(l, ind + dim2 + 1, w(6)));
+        trip.emplace_back(T(l, ind + dim1*dim2 + dim2 + 1, w(7)));
     }
 
     W.setFromTriplets(trip.begin(), trip.end());
