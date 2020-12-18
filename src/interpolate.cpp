@@ -9,7 +9,7 @@ void interpolate(
     const int &ny,
     const int &nz,
     const int &dim,
-    const double &h,
+    const Eigen::RowVector3d& h,
     const Eigen::RowVector3d& corner,
     const Eigen::MatrixXd& q,
     Eigen::VectorXd& sum,
@@ -33,7 +33,7 @@ void interpolate(
 
     for (int l = 0; l < n_particles; l++) {
         Eigen::RowVector3d x = q.row(l) - corner;
-        Eigen::RowVector3d d = x / h;
+        Eigen::RowVector3d d = x.cwiseQuotient(h);
         Eigen::RowVector3d ids = d.unaryExpr([](double x){ return floor(std::max(x, 0.)); });
         ids(dim) = std::min(int(ids(dim)), tmp - 2);
 
@@ -41,18 +41,19 @@ void interpolate(
         d(dim) = std::min(d(dim), 1.0);
         
         i = int(ids(0)); j = int(ids(1)); k = int(ids(2));
+
         int ind = i * ny * nz + j * nz + k;
 
         trilinear_interpolation(d, w);
 
-        trip.emplace_back(T(l, ind,                    w[0]));
-        trip.emplace_back(T(l, ind + ny*nz,            w[1]));
-        trip.emplace_back(T(l, ind + nz,               w[2]));
-        trip.emplace_back(T(l, ind + ny*nz + nz,       w[3]));
-        trip.emplace_back(T(l, ind + 1,                w[4]));
-        trip.emplace_back(T(l, ind + nz * ny + 1,      w[5]));
-        trip.emplace_back(T(l, ind + nz + 1,           w[6]));
-        trip.emplace_back(T(l, ind + nz + nz * ny + 1, w[7]));
+        trip.emplace_back(T(l, ind,                    w(0)));
+        trip.emplace_back(T(l, ind + ny*nz,            w(1)));
+        trip.emplace_back(T(l, ind + nz,               w(2)));
+        trip.emplace_back(T(l, ind + ny*nz + nz,       w(3)));
+        trip.emplace_back(T(l, ind + 1,                w(4)));
+        trip.emplace_back(T(l, ind + nz * ny + 1,      w(5)));
+        trip.emplace_back(T(l, ind + nz + 1,           w(6)));
+        trip.emplace_back(T(l, ind + nz + nz * ny + 1, w(7)));
     }
 
     W.setFromTriplets(trip.begin(), trip.end());

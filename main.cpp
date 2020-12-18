@@ -43,7 +43,7 @@ int main(int argc, char** argv) {
 	double dt = 0.01;
 	double height = 0.3;
 	Eigen::Vector3d gravity = Eigen::Vector3d(0, -9.8, 0);
-	Eigen::Vector3d h = Eigen::Vector3d(0.01, 0.01, 0.01);
+	Eigen::Vector3d h = Eigen::Vector3d(0.025, 0.08, 0.025);
 	Eigen::Vector3d left_lower_corner = Eigen::Vector3d(-0.2, -0.4, -0.2);
 	Eigen::Vector3d right_upper_corner = Eigen::Vector3d(0.2, 0.4, 0.2);
 
@@ -73,8 +73,6 @@ int main(int argc, char** argv) {
 		// add gravity
 		add_gravity(grid, particles, gravity, dt);
 
-		// TODO: compute_distance_to_fluid
-		// TODO: extend_velocity
 		t_before = igl::get_seconds();
 		grid.apply_boundary_condition(); // TODO
 		grid.pressure_projection();
@@ -82,8 +80,6 @@ int main(int argc, char** argv) {
 		t_after = igl::get_seconds();
 		std::cerr << t_after - t_before << "\n";
 		
-		// TODO: make incompressible
-		// TODO: extend_velocity
 		t_before = igl::get_seconds();
 		grid_to_particle_velocity_update(grid, particles);
 		t_after = igl::get_seconds();
@@ -113,8 +109,10 @@ int main(int argc, char** argv) {
 		switch (key)
 		{
 		case ' ':
-			std::cerr << "-------------\n";
-			std::cerr << timer(update) << " seconds \n";
+			for (int i = 0; i < 5; i++) {
+				std::cerr << "-------------\n";
+				std::cerr << timer(update) << " seconds \n";
+			}
 			break;
 		default:
 			return false;

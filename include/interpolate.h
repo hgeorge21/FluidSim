@@ -14,7 +14,7 @@ void interpolate(
     const int& ny,
     const int& nz,
     const int& dim,
-    const double& h,
+    const Eigen::RowVector3d& h,
     const Eigen::RowVector3d& corner,
     const Eigen::MatrixXd& q,
     Eigen::VectorXd& sum,

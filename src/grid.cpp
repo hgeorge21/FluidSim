@@ -2,7 +2,7 @@
 #include <chrono>
 #include <random>
 #include <iostream>
-#include <Eigen/Eigen/src/IterativeLinearSolvers/ConjugateGradient.h>
+#include <divergence.h>
 
 
 void Grid::init() {
@@ -17,6 +17,8 @@ void Grid::init() {
 	pressure = Eigen::VectorXd::Zero(n_grids);
 	markers = Eigen::VectorXi::Zero(n_grids);
 	divergence = Eigen::VectorXd::Zero(n_grids);
+
+	get_divergence_operator();
 
 	// sets up the selection matrix for the boundaries
 	typedef Eigen::Triplet<double> T;
@@ -39,8 +41,8 @@ void Grid::init() {
 		int dim1 = (dim == 1) ? ny + 1 : ny;
 		int dim2 = (dim == 2) ? nz + 1 : nz;
 
-		for (int i = ll0; i < ul0; i++) {
-			for (int j = ll1; j < ul1; j++) {
+		for (int i = ll0; i < ul0; i++)
+			for (int j = ll1; j < ul1; j++)
 				for (int k = ll2; k < ul2; k++) {
 					int idx = i * dim1 * dim2 + j * dim2 + k;
 
@@ -51,8 +53,6 @@ void Grid::init() {
 					if (dim == 2)
 						trip_z.emplace_back(T(idx, idx, 1.0));
 				}
-			}
-		}
 	};
 
 	set_sparse_vec(0);
@@ -92,7 +92,7 @@ void Grid::add_fluid(Particle& particles, const double& height) {
 
 				// claim the fluid cells
 				int org_idx = (i + 1) * (ny * nz) + (j + 1) * nz + k + 1;
-				markers(org_idx) = (j < fluid_height) ? FLUIDCELL : AIRCELL;
+				markers(org_idx) = FLUIDCELL; // (j < fluid_height) ? FLUIDCELL : AIRCELL;
 
 				// generate fluid particles
 				Eigen::RowVector3d lower_corner = left_lower_corner + h + h.cwiseProduct(Eigen::Vector3d(i, j, k));
@@ -144,6 +144,17 @@ void Grid::apply_boundary_condition() {
 }
 
 
+
+void Grid::get_divergence_operator() {
+	divergence_op(nx, ny, nz, 0, h, markers, Dx);
+	divergence_op(nx, ny, nz, 1, h, markers, Dy);
+	divergence_op(nx, ny, nz, 2, h, markers, Dz);
+}
+
+
+
+
+
 int Grid::get_idx(const int& xi, const int& yi, const int& zi) {
 	return xi * ny * nz + yi * nz + zi;
 }
@@ -153,25 +164,18 @@ void Grid::pressure_projection() {
 	get_divergence();
 	get_laplacian_operator();
 	solve_pressure();
+
+
 }
+
+
+
 
 // Get divergence of v
 void Grid::get_divergence() {
-	divergence.resize(n_grids);
-	divergence.setZero();
-	for (int i = 1; i < nx - 1; i++) {
-		for (int j = 1; j < ny - 1; j++) {
-			for (int k = 1; k < nz - 1; k++) {
-				if (markers(get_idx(i, j, k)) == FLUIDCELL)
-					divergence(get_idx(i, j, k)) = (Vx(get_idx(i + 1, j, k))
-					- Vx(get_idx(i, j, k))) / h(0)
-					+ (Vy(get_idx(i + 1, j, k))
-					- Vy(get_idx(i, j, k))) / h(1)
-					+ (Vz(get_idx(i + 1, j, k))
-					- Vz(get_idx(i, j, k))) / h(2);
-			}
-		}
-	}
+	divergence = Dx * Vx + Dy * Vy + Dz * Vz;
+	std::cerr << divergence.rows() << "\n";
+	std::cerr << n_grids << "\n";
 }
 
 // Get laplacian operator - matrix A
@@ -206,6 +210,8 @@ void Grid::get_laplacian_operator() {
 				int index = get_idx(i, j, k);
 				int index2;
 				if (markers[index] == FLUIDCELL) {
+					trip.push_back(T(index, index, -2. * inv_h.sum()));
+
 					index2 = get_idx(i - 1, j, k);
 					if (markers[index2] == FLUIDCELL)
 						trip.push_back(T(index, index2, inv_h(0)));
@@ -235,10 +241,10 @@ void Grid::get_laplacian_operator() {
 	}
 	A.setFromTriplets(trip.begin(), trip.end());
 	// check self-adjoint
-//	if (!A.transpose().conjugate().isApprox(A))
-//		std::cout << "Warning: Matrix A not self-adjoint" << std::endl;
-//	else 
-//		std::cout << "Matrix A IS self-adjoint, can switch ConjugateGradient to solve A instead" << std::endl;
+	if (!A.transpose().conjugate().isApprox(A))
+		std::cout << "Warning: Matrix A not self-adjoint" << std::endl;
+	else 
+		std::cout << "Matrix A IS self-adjoint, can switch ConjugateGradient to solve A instead" << std::endl;
 	//for (int i = 1; i < nx - 2; i++) {
 //	for (int j = 1; j < ny - 2; j++) {
 //		for (int k = 1; k < nz - 2; k++){
@@ -260,10 +266,12 @@ void Grid::get_laplacian_operator() {
 //}
 }
 
+
+
 // Solve pressure by Conjugate Gradient Method
 void Grid::solve_pressure() {
 	Eigen::ConjugateGradient<Eigen::SparseMatrix<double>, Eigen::Lower | Eigen::Upper> cg;
-	cg.setTolerance(1e-4);
+	cg.setTolerance(1e-8);
 
 	// not sure if A is self-adjoint - use AT*A instead
 	cg.compute(A);

@@ -1,7 +1,7 @@
 #include <trilinear_interpolation.h>
 
 void trilinear_interpolation(const Eigen::RowVector3d& d, Eigen::VectorXd& w) {
-    w = Eigen::VectorXd(8);
+    w.resize(8);
 
     double xd, yd, zd;
     xd = d(0); yd = d(1); zd = d(2);
