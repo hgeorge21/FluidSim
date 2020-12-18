@@ -25,14 +25,18 @@ void Grid::init() {
 	Px.resize((nx + 1) * ny * nz, (nx + 1) * ny * nz);
 	Py.resize(nx * (ny + 1) * nz, nx * (ny + 1) * nz);
 	Pz.resize(nx * ny * (nz + 1), nx * ny * (nz + 1));
+	Px.setZero();
+	Py.setZero();
+	Pz.setZero();
 
+	// first & last two edges are 0
 	const auto& set_sparse_vec = [&](const int& dim) {
-		int ll0 = (dim == 0) ? 1 : 0; // 1 or 2??
-		int ll1 = (dim == 1) ? 1 : 0;
-		int ll2 = (dim == 2) ? 1 : 0;
-		int ul0 = (dim == 0) ? nx : nx; // nx-1 or nx ??
-		int ul1 = (dim == 1) ? ny : ny;
-		int ul2 = (dim == 2) ? nz : nz;
+		int ll0 = (dim == 0) ? 2 : 0; // 1 or 2??
+		int ll1 = (dim == 1) ? 2 : 0;
+		int ll2 = (dim == 2) ? 2 : 0;
+		int ul0 = (dim == 0) ? nx - 2 : nx; // nx-1 or nx ??
+		int ul1 = (dim == 1) ? ny - 2 : ny;
+		int ul2 = (dim == 2) ? nz - 2 : nz;
 		int dim0 = (dim == 0) ? nx+1 : nx;
 		int dim1 = (dim == 1) ? ny+1 : ny;
 		int dim2 = (dim == 2) ? nz+1 : nz;
@@ -262,6 +266,34 @@ void Grid::solve_pressure() {
 	pressure = cg.solve(divergence);
 	if (cg.info() != Eigen::Success)
 		std::cerr << "Warning: Conjugate Gradient Solver solving failed. However decomposition seems work" << std::endl;
+	print_pressure();
+	check_pressure();
+}
+
+void Grid::print_pressure() {
+	
+	for (int level = 1; level < nz - 1; level++) {
+		double pressure_per_lv = 0.0;
+		for (int x = 1; x < nx - 1; x++) {
+			for (int y = 1; y < ny - 1; y++){
+				int idx = get_idx(x, y, level);
+				pressure_per_lv += pressure(idx);
+			}
+		}
+		std::cout << "Avg pressure at level " << level << ": " << pressure_per_lv/(double)((nx-2)*(ny-2)) << std::endl;
+	}
+}
+
+void Grid::check_pressure() {
+	for (int z = 0; z < nz; z++) {
+		for (int x = 0; x < nx; x++) {
+			for (int y = 0; y < ny; y++) {
+				int idx = get_idx(x, y, z);
+				if (markers[idx] != FLUIDCELL && pressure[idx] != 0)
+					std::cout << "Pressure found in non-fluid cell" << x << y << z << ": " << pressure[idx] << std::endl;
+			}
+		}
+	}
 }
 
 
