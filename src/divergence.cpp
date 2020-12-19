@@ -31,10 +31,8 @@ void divergence_op(
 			for (int k = 1; k < nz - 2; k++) {
 				int index = get_idx(i, j, k);
 				if (markers(index) == FLUIDCELL) {
-					if (dim < 3) {
-						trip1.emplace_back(T(index, get_idx2(i + 1, j, k), 1. / h(dim)));
-						trip1.emplace_back(T(index, get_idx2(i, j, k), -1. / h(dim)));
-					}
+					trip1.emplace_back(T(index, get_idx2(i + 1, j, k), 1. / h(dim)));
+					trip1.emplace_back(T(index, get_idx2(i, j, k), -1. / h(dim)));
 				}
 			}
 		}
@@ -55,9 +53,6 @@ void gradient_op(
 	int ll0 = (dim == 0) ? 2 : 1;
 	int ll1 = (dim == 1) ? 2 : 1;
 	int ll2 = (dim == 2) ? 2 : 1;
-	int ul0 = (dim == 0) ? nx - 2 : nx - 1;
-	int ul1 = (dim == 1) ? ny - 2 : ny - 1;
-	int ul2 = (dim == 2) ? nz - 2 : nz - 1;
 	int dim0 = (dim == 0) ? nx + 1 : nx;
 	int dim1 = (dim == 1) ? ny + 1 : ny;
 	int dim2 = (dim == 2) ? nz + 1 : nz;
@@ -71,9 +66,9 @@ void gradient_op(
 	// for different grids
 	const auto& get_idx2 = [&](int xi, int yi, int zi) { return xi * dim1 * dim2 + yi * dim2 + zi; };
 
-	for (int i = ll0; i < ul0; i++) {
-		for (int j = ll1; j < ul1; j++) {
-			for (int k = ll2; k < ul2; k++) {
+	for (int i = ll0; i < nx-1; i++) {
+		for (int j = ll1; j < ny-1; j++) {
+			for (int k = ll2; k < nz-1; k++) {
 				int index = get_idx(i, j, k); // index of grid edge
 				int index_prev;
 				if (dim == 0)
@@ -89,7 +84,6 @@ void gradient_op(
 					(markers(index) != SOLIDCELL && markers(index_prev) != SOLIDCELL)) {
 					trip1.emplace_back(T(index_grid, index, 1. / h(dim)));
 					trip1.emplace_back(T(index_grid, index_prev, -1. / h(dim)));
-
 				}
 			}
 		}
