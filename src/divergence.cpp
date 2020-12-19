@@ -55,9 +55,9 @@ void gradient_op(
 	int ll0 = (dim == 0) ? 2 : 1;
 	int ll1 = (dim == 1) ? 2 : 1;
 	int ll2 = (dim == 2) ? 2 : 1;
-	int ul0 = (dim == 0) ? nx - 2 : nx - 1;
-	int ul1 = (dim == 1) ? ny - 2 : ny - 1;
-	int ul2 = (dim == 2) ? nz - 2 : nz - 1;
+	int ul0 = (dim == 0) ? nx - 1 : nx;
+	int ul1 = (dim == 1) ? ny - 1 : ny;
+	int ul2 = (dim == 2) ? nz - 1 : nz;
 	int dim0 = (dim == 0) ? nx + 1 : nx;
 	int dim1 = (dim == 1) ? ny + 1 : ny;
 	int dim2 = (dim == 2) ? nz + 1 : nz;

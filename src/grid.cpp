@@ -31,9 +31,9 @@ void Grid::init() {
 
 	// first & last two edges are 0
 	const auto& set_sparse_vec = [&](const int& dim) {
-		int ll0 = (dim == 0) ? 2 : 0; // 1 or 2??
-		int ll1 = (dim == 1) ? 2 : 0;
-		int ll2 = (dim == 2) ? 2 : 0;
+		int ll0 = (dim == 0) ? 2 : 1; // 1 or 2??
+		int ll1 = (dim == 1) ? 2 : 1;
+		int ll2 = (dim == 2) ? 2 : 1;
 		int ul0 = (dim == 0) ? nx-1 : nx; // nx-1 or nx ??
 		int ul1 = (dim == 1) ? ny-1 : ny;
 		int ul2 = (dim == 2) ? nz-1 : nz;
