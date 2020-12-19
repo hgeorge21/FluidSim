@@ -244,7 +244,7 @@ void Grid::get_laplacian_operator() {
 				if (markers[index] == FLUIDCELL) {
 					trip.push_back(T(index, index, -2. * inv_h.sum()));
 
-					index2 = get_idx(i - 1, j, k);
+					index2 = get_idx(i - 1, j, k); 
 					if (markers[index2] != SOLIDCELL){
 						trip.push_back(T(index, index2, inv_h(0)));
 					}
@@ -382,7 +382,7 @@ void Grid::check_divergence() {
 	if (!divergence_.isApprox(divergence)) // initially they are both 0, so not the same
 		std::cerr << "Warining: Divergence is not the same" << std::endl;
 	else
-		std::cerr << "Divergence IS the same" << std::endl;
+		std::cerr << "Checking: Divergence IS the same" << std::endl;
 }
 
 // check if gradient matrix A = B * D
@@ -402,9 +402,9 @@ void Grid::check_laplacian() {
 	D << Dx_, Dy_, Dz_;
 
 	if (!(B * D).sparseView().isApprox(A))
-		std::cerr << "A != B * D" << std::endl;
+		std::cerr << "Warning: A != B * D" << std::endl;
 	else
-		std::cerr << "A = B * D" << std::endl;
+		std::cerr << "Checking: A = B * D" << std::endl;
 }
 
 
