@@ -192,6 +192,7 @@ void Grid::get_divergence2() {
 		return xi * dim1 * dim2 + yi * dim2 + zi; 
 	};
 	divergence.resize(n_grids);
+	divergence.setZero();
 	for (int i = 0; i < nx; ++i) {
 		for (int j = 0; j < ny; ++j) {
 			for (int k = 0; k < nz; ++k) {
