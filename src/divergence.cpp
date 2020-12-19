@@ -26,13 +26,17 @@ void divergence_op(
 	// for different grids
 	const auto& get_idx2 = [&](int xi, int yi, int zi) { return xi * dim1 * dim2 + yi * dim2 + zi; };
 
-	for (int i = 1; i < nx - 2; i++) {
-		for (int j = 1; j < ny - 2; j++) {
-			for (int k = 1; k < nz - 2; k++) {
+	for (int i = 0; i < nx; i++) {
+		for (int j = 0; j < ny; j++) {
+			for (int k = 0; k < nz; k++) {
 				int index = get_idx(i, j, k);
+				int index2 = (dim == 0) ? get_idx2(i + 1, j, k) :
+					(dim == 1) ? get_idx2(i, j + 1, k) :
+					get_idx2(i, j, k + 1);
+				int index3 = get_idx2(i, j, k);
 				if (markers(index) == FLUIDCELL) {
-					trip1.emplace_back(T(index, get_idx2(i + 1, j, k), 1. / h(dim)));
-					trip1.emplace_back(T(index, get_idx2(i, j, k), -1. / h(dim)));
+					trip1.emplace_back(T(index, index2, 1. / h(dim)));
+					trip1.emplace_back(T(index, index3, -1. / h(dim)));
 				}
 			}
 		}

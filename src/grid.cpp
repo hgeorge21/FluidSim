@@ -331,7 +331,7 @@ void Grid::solve_pressure() {
 	pressure = cg.solve(A.transpose() * divergence);
 	if (cg.info() != Eigen::Success)
 		std::cerr << "Warning: Conjugate Gradient Solver solving failed. However decomposition seems work" << std::endl;
-	print_pressure();
+//	print_pressure();
 }
 
 
@@ -380,7 +380,7 @@ void Grid::check_divergence() {
 	Eigen::VectorXd divergence_ = Dx * Vx + Dy * Vy + Dz * Vz;
 	divergence_ = (density / dt) * divergence_;
 	if (!divergence_.isApprox(divergence)) // initially they are both 0, so not the same
-		std::cerr << "Divergence is not the same" << std::endl;
+		std::cerr << "Warining: Divergence is not the same" << std::endl;
 	else
 		std::cerr << "Divergence IS the same" << std::endl;
 }
