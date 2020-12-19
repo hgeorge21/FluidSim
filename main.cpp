@@ -43,18 +43,18 @@ int main(int argc, char** argv) {
 	double height = 0.3;
 	Eigen::Vector3d h = Eigen::Vector3d(0.1, 0.1, 0.1);
 	Eigen::Vector3d gravity = Eigen::Vector3d(0, -0.098, 0);
-	Eigen::Vector3d left_lower_corner = Eigen::Vector3d(-1., -1., -1.);
-	Eigen::Vector3d right_upper_corner = Eigen::Vector3d(1., 1., 1.);
+	Eigen::Vector3d left_lower_corner = Eigen::Vector3d(-0.5, -0.5, -0.5);
+	Eigen::Vector3d right_upper_corner = Eigen::Vector3d(0.5, 0.5, 0.5);
 
 	// for visualizing boundary
 	create_rectangle(left_lower_corner, right_upper_corner, V, F);
 
 	Particle particles;
-	Grid grid(dt, left_lower_corner, right_upper_corner, h, FLIP);
+	Grid grid(dt, left_lower_corner, right_upper_corner, h, PIC);
 
 	// create grid
 	grid.init();
-	grid.add_fluid(particles, Eigen::Vector3d(-0.5, -1, -0.5), Eigen::Vector3d(0.5, 0.5, 0.5), Eigen::Vector3d(0.05, 0.05, 0.05), height);
+	grid.add_fluid(particles, Eigen::Vector3d(-0.1, -0.1, -0.1), Eigen::Vector3d(0.1, 0.1, 0.1), Eigen::Vector3d(0.05, 0.05, 0.05), height);
 
 	// a complete time step
 	const auto& step_update = [&]() {
@@ -73,6 +73,7 @@ int main(int argc, char** argv) {
 		std::cerr << t_after - t_before << "\n";
 		
 		grid_to_particle_velocity_update(grid, particles);
+
 	};
 
 

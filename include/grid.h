@@ -26,7 +26,7 @@ public:
 	Eigen::Vector3d right_upper_corner;
 
 	int nx, ny, nz, n_grids;
-	double density;
+	double density = 1.0;
 	Eigen::VectorXd Vx, Vy, Vz;
 	Eigen::VectorXd pressure;   // nx1 the pressure at each grid
 	Eigen::VectorXi markers;    // nx1 marks the type of the cell
@@ -53,7 +53,12 @@ public:
 	void add_fluid(Particle& particles, const Eigen::Vector3d& v1, const Eigen::Vector3d& v2, const Eigen::Vector3d& hf, const double& height);
 	void apply_boundary_condition();
 	void pressure_projection();
+
 	void get_divergence();
+	void get_divergence2();
+
+	void check_divergence();
+	void check_laplacian();
 	
 	void solve_pressure();
 	void update_velocity();
@@ -61,11 +66,13 @@ public:
 
 	void print_pressure();
 	void check_pressure();
+	void print_cell();
 
 private:
 	void get_divergence_operator();
 	void get_laplacian_operator();
 	void get_gradient_operator();
+	void get_laplacian_operator2();
 };
 
 
