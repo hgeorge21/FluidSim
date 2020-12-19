@@ -36,8 +36,8 @@ int main(int argc, char** argv) {
 	std::cout << "\n";
 
 	// load mesh
-	Eigen::MatrixXd V;
-	Eigen::MatrixXi F;
+	Eigen::MatrixXd V, V1;
+	Eigen::MatrixXi F, F1;
 	
 	double dt = 0.3;
 	double height = 0.3;
@@ -48,6 +48,7 @@ int main(int argc, char** argv) {
 
 	// for visualizing boundary
 	create_rectangle(left_lower_corner, right_upper_corner, V, F);
+	create_rectangle(left_lower_corner + h, right_upper_corner - h, V1, F1);
 
 	Particle particles;
 	Grid grid(dt, left_lower_corner, right_upper_corner, h, FLIP);
@@ -64,13 +65,8 @@ int main(int argc, char** argv) {
 		advect_velocity(grid, particles, dt);
 		transfer_to_grid(grid, particles);
 		add_gravity(grid, particles, gravity, dt);
-
 		grid.apply_boundary_condition();
-
-		t_before = igl::get_seconds();
 		grid.pressure_projection();
-		t_after = igl::get_seconds();
-		std::cerr << t_after - t_before << "\n";
 		
 		grid_to_particle_velocity_update(grid, particles);
 	};
@@ -123,6 +119,7 @@ int main(int argc, char** argv) {
 
 	// start the viewer and set the mesh
 	viewer.data().set_mesh(V, F);
+	//viewer.data().set_mesh(V1, F1);
 	
 	show_particles();
 	viewer.data().show_lines = false;

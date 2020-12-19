@@ -31,10 +31,10 @@ void Grid::init() {
 
 	// first & last two edges are 0
 	const auto& set_sparse_vec = [&](const int& dim) {
-		int ll0 = (dim == 0) ? 2 : 0; // 1 or 2??
+		int ll0 = (dim == 0) ? 2 : 0;
 		int ll1 = (dim == 1) ? 2 : 0;
 		int ll2 = (dim == 2) ? 2 : 0;
-		int ul0 = (dim == 0) ? nx-1 : nx; // nx-1 or nx ??
+		int ul0 = (dim == 0) ? nx-1 : nx;
 		int ul1 = (dim == 1) ? ny-1 : ny;
 		int ul2 = (dim == 2) ? nz-1 : nz;
 		int dim0 = (dim == 0) ? nx+1 : nx;
@@ -95,12 +95,11 @@ void Grid::add_fluid(Particle& particles, const Eigen::Vector3d &v1, const Eigen
 				int idx = i * (ny_f * nz_f) + j * nz_f + k;
 
 				// generate fluid particles
-				Eigen::RowVector3d lower_corner = v1 + h + hf.cwiseProduct(Eigen::Vector3d(i, j, k));
+				Eigen::RowVector3d lower_corner = v1 + 2*h + hf.cwiseProduct(Eigen::Vector3d(i, j, k));
 				Eigen::MatrixXd q_ = Eigen::MatrixXd::NullaryExpr(n_per_cell, 3, [&]() { return dist(generator);  });
 				q_.col(0) = h(0) * q_.col(0);
 				q_.col(1) = h(1) * q_.col(1);
 				q_.col(2) = h(2) * q_.col(2);
-
 				q_ = q_.rowwise() + lower_corner;
 				particles.q.block(n_per_cell * idx, 0, n_per_cell, 3) = q_;
 				particles.type.block(n_per_cell * idx, 0, n_per_cell, 1) = FLUID_P * Eigen::VectorXi::Ones(n_per_cell);
