@@ -156,12 +156,14 @@ int Grid::get_idx(const int& xi, const int& yi, const int& zi) {
 
 void Grid::pressure_projection() {
 	//print_cell();
+	get_gradient_operator();
 	get_divergence_operator();
-	get_divergence();
+
+	//get_divergence();
+	get_divergence2();
 
 	get_laplacian_operator();
 
-	//get_divergence2();
 	solve_pressure();
 	update_velocity();
 	//print_cell(); 
@@ -189,11 +191,14 @@ void Grid::get_divergence2() {
 		for (int j = 0; j < ny; ++j) {
 			for (int k = 0; k < nz; ++k) {
 				int idx = get_idx(i, j, k);
+
+				
+
 				if (markers[idx] == FLUIDCELL)
 					divergence[idx] =
 					(Vx[get_idx2(i + 1, j, k, 0)] - Vx[get_idx2(i, j, k, 0)]) / h(0) +
 					(Vy[get_idx2(i, j + 1, k, 1)] - Vy[get_idx2(i, j, k, 1)]) / h(1) +
-					(Vy[get_idx2(i, j, k + 1, 2)] - Vy[get_idx2(i, j, k, 2)]) / h(2);
+					(Vz[get_idx2(i, j, k + 1, 2)] - Vz[get_idx2(i, j, k, 2)]) / h(2);
 			}
 		}
 	}
@@ -208,8 +213,6 @@ void Grid::get_gradient_operator() {
 	gradient_op(nx, ny, nz, 0, h, markers, Gx);
 	gradient_op(nx, ny, nz, 1, h, markers, Gy);
 	gradient_op(nx, ny, nz, 2, h, markers, Gz);
-
-	check_laplacian();
 }
 
 
@@ -283,6 +286,8 @@ void Grid::get_laplacian_operator() {
 		std::cout << "Warning: Matrix A not self-adjoint" << std::endl;
 	else 
 		std::cout << "Matrix A IS self-adjoint, can switch ConjugateGradient to solve A instead" << std::endl;
+
+	check_laplacian();
 }
 
 // Get A = B * D
@@ -311,10 +316,10 @@ void Grid::solve_pressure() {
 	cg.setTolerance(1e-8);
 
 	// not sure if A is self-adjoint - use AT*A instead
-	cg.compute(A);
+	cg.compute(A.transpose() * A);
 	if (cg.info() != Eigen::Success)
 		std::cerr << "Warning: Conjugate Gradient Solver decomposition failed, given matrix is not self-adjoint" << std::endl;
-	pressure = cg.solve(divergence);
+	pressure = cg.solve(A.transpose() * divergence);
 	if (cg.info() != Eigen::Success)
 		std::cerr << "Warning: Conjugate Gradient Solver solving failed. However decomposition seems work" << std::endl;
 	print_pressure();
@@ -322,7 +327,6 @@ void Grid::solve_pressure() {
 
 
 void Grid::update_velocity() {
-	get_gradient_operator();
 	Vx -= dt / density * Gx * pressure;
 	Vy -= dt / density * Gy * pressure;
 	Vz -= dt / density * Gz * pressure;
@@ -347,8 +351,6 @@ void Grid::print_pressure() {
 	}
 }
 
-
-
 void Grid::print_cell() {
 	for (int y = ny - 1; y >= 0 ; y--) {
 		std::cout << "Level " << y << "-------------------------------\n";
@@ -368,13 +370,13 @@ void Grid::print_cell() {
 void Grid::check_divergence() {
 	Eigen::VectorXd divergence_ = Dx * Vx + Dy * Vy + Dz * Vz;
 	divergence_ = (density / dt) * divergence_;
-	if (divergence_.isApprox(divergence)) // initially they are both 0, so not the same
+	if (!divergence_.isApprox(divergence)) // initially they are both 0, so not the same
 		std::cerr << "Divergence is not the same" << std::endl;
 	else
 		std::cerr << "Divergence IS the same" << std::endl;
 }
 
-// check if gradient matrix D = B-1 * A
+// check if gradient matrix A = B * D
 void Grid::check_laplacian() {
 	Eigen::MatrixXd B, Bx_, By_, Bz_, D, Dx_, Dy_, Dz_;
 
