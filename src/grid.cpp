@@ -156,10 +156,15 @@ int Grid::get_idx(const int& xi, const int& yi, const int& zi) {
 
 void Grid::pressure_projection() {
 	//print_cell();
+
+	std::cout << "Now get gradient op" << std::endl;
 	get_gradient_operator();
+
+	std::cout << "Now get divergence op" << std::endl;
 	get_divergence_operator();
 
 	//get_divergence();
+	std::cout << "Now get divergence2" << std::endl;
 	get_divergence2();
 
 	get_laplacian_operator();
@@ -192,9 +197,12 @@ void Grid::get_divergence2() {
 			for (int k = 0; k < nz; ++k) {
 				int idx = get_idx(i, j, k);
 
-				
+				//std::cout << "Now markers" << std::endl;
 
 				if (markers[idx] == FLUIDCELL)
+
+				//std::cout << "Now divergence and Vxyz" << std::endl;
+
 					divergence[idx] =
 					(Vx[get_idx2(i + 1, j, k, 0)] - Vx[get_idx2(i, j, k, 0)]) / h(0) +
 					(Vy[get_idx2(i, j + 1, k, 1)] - Vy[get_idx2(i, j, k, 1)]) / h(1) +

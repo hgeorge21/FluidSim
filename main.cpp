@@ -62,12 +62,19 @@ int main(int argc, char** argv) {
 		double t_before, t_after;
 
 		// advection / move
+
+		std::cerr << "Now advect_velocity" << std::endl;
 		advect_velocity(grid, particles, dt);
+		std::cerr << "Now transfer_to_grid" << std::endl;
 		transfer_to_grid(grid, particles);
+		std::cerr << "Now add_gravity" << std::endl;
 		add_gravity(grid, particles, gravity, dt);
+		std::cerr << "Now apply_boundary_condition" << std::endl;
 		grid.apply_boundary_condition();
+		std::cerr << "Now pressure_projection" << std::endl;
 		grid.pressure_projection();
-		
+
+		std::cerr << "Now grid_to_particle_velocity_update" << std::endl;
 		grid_to_particle_velocity_update(grid, particles);
 
 	};
@@ -86,7 +93,11 @@ int main(int argc, char** argv) {
 	};
 
 	const auto &update = [&]() {
+
+		std::cerr << "Now step update" << std::endl;
 		step_update();
+
+		std::cerr << "Now show particles" << std::endl;
 		show_particles();
 	};
 
