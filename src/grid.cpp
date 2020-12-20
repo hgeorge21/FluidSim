@@ -229,8 +229,6 @@ void Grid::get_laplacian_operator() {
 }
 
 
-
-
 int Grid::get_idx(const int& xi, const int& yi, const int& zi) {
 	return xi * ny * nz + yi * nz + zi;
 }
@@ -272,7 +270,6 @@ void Grid::get_divergence() {
 	}
 	divergence = (density / dt) * divergence;
 }
-
 
 
 // Solve pressure by Conjugate Gradient Method
