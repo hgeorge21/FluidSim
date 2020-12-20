@@ -21,9 +21,9 @@ public:
 	double dt;
 	transfer_method method;
 
-	Eigen::Vector3d h;
-	Eigen::Vector3d left_lower_corner;
-	Eigen::Vector3d right_upper_corner;
+	Eigen::RowVector3d h;
+	Eigen::RowVector3d left_lower_corner;
+	Eigen::RowVector3d right_upper_corner;
 
 	int nx, ny, nz, n_grids;
 	double density = 1.0;
@@ -48,9 +48,10 @@ public:
 	{}
 	
 	int get_idx(const int& xi, const int& yi, const int& zi);
+	//int get_idx2(const int &xi, const int &yi, const int &zi, const int &dim);
 
 	void init();
-	void add_fluid(Particle& particles, const Eigen::Vector3d& v1, const Eigen::Vector3d& v2, const Eigen::Vector3d& hf, const double& height);
+	void add_fluid(Particle& particles, const Eigen::RowVector3d& v1, const Eigen::RowVector3d& v2, const Eigen::RowVector3d& hf, const double& height);
 	void apply_boundary_condition();
 	void pressure_projection();
 
@@ -60,6 +61,19 @@ public:
 	void update_velocity();
 	void save_grids();
 
+
+
+	/* Free boundary related functions */
+	Eigen::VectorXi cp; // closest points in each grid
+	Eigen::VectorXd phi; // distance function
+	
+	void init_phi(Particle &particles);
+	void signed_distance(const Eigen::RowVector3d& v1, const Eigen::RowVector3d& pt, double& d);
+	void sweep_phi(Particle& particles);
+	void distance_to_fluid(Particle& particles);
+
+	void sweep_velocity();
+	void sweep_dir(const int& dir);
 
 private:
 	void get_divergence_operator();

@@ -66,9 +66,9 @@ void Grid::init() {
 }
 
 
-void Grid::add_fluid(Particle& particles, const Eigen::Vector3d &v1, const Eigen::Vector3d &v2, const Eigen::Vector3d &hf, const double& height) {
+void Grid::add_fluid(Particle& particles, const Eigen::RowVector3d &v1, const Eigen::RowVector3d &v2, const Eigen::RowVector3d &hf, const double& height) {
 	// calculate for fluids
-	Eigen::Vector3d ns = (v2 - v1).cwiseQuotient(hf);
+	Eigen::RowVector3d ns = (v2 - v1).cwiseQuotient(hf);
 	int nx_ = ceil(ns(0));
 	int ny_ = ceil(ns(1));
 	int nz_ = ceil(ns(2));
@@ -299,3 +299,273 @@ void Grid::save_grids() {
 	Vy_ = Vy;
 	Vz_ = Vz;
 }
+
+
+
+void Grid::distance_to_fluid(Particle &particles) {
+	init_phi(particles);
+	sweep_phi(particles);
+	sweep_phi(particles);
+}
+
+
+/* Signed Distance Stuff */
+
+void Grid::init_phi(Particle &particles) {
+	int n_grids = nx * ny * nz;
+	phi = Eigen::VectorXd::Constant(n_grids, std::numeric_limits<double>::max());
+	cp = Eigen::VectorXi::Constant(n_grids, -1);
+
+	const auto& ks = [](double x) -> double { return std::max(0., pow(1 - x * x, 3)); };
+
+	// initialize the arrays near the near geometry
+	int i, j, k;
+	Eigen::MatrixXd X = Eigen::MatrixXd::Zero(n_grids, 3);
+	Eigen::VectorXd w = Eigen::VectorXd::Zero(n_grids);
+	Eigen::VectorXd r = Eigen::VectorXd::Zero(n_grids);
+
+	Eigen::RowVector3d x;
+	Eigen::RowVector3d ids;
+	const auto& add_stuff = [&](const int& xi, const int& yi, const int& zi) {
+		if (xi < 1 || xi > nx - 2)
+			return;
+		if (yi < 1 || yi > ny - 2)
+			return;
+		if (zi < 1 || zi > nz - 2)
+			return;
+		int grid_id = get_idx(xi, yi, zi);
+		Eigen::RowVector3d p = ids.cwiseProduct(h) + 0.5 * h; // pressure point coordinates
+		double wi = ks(0.5 * (x - p).norm() / h.maxCoeff());
+		X.row(grid_id) += wi * x;
+		r(grid_id) += wi * 0.5 * h.maxCoeff(); // should modify this
+		w(grid_id) += wi;
+	};
+
+	for (int l = 0; l < particles.q.rows(); l++) {
+		x = particles.q.row(l);
+		ids = (x - left_lower_corner).cwiseQuotient(h);
+		ids = ids.unaryExpr([](double x) { return floor(x); });
+
+		for (int i0 = -1; i0 <= 1; i0++) {
+			for (int j0 = -1; j0 <= 1; j0++) {
+				for (int k0 = -1; k0 <= 1; k0++) {
+					add_stuff(int(ids(0))+i0, int(ids(1))+j0, int(ids(2))+k0);
+				}
+			}
+		}
+	}
+
+	for (int i = 1; i < nx-1; i++) {
+		for (int j = 1; j < ny-1; j++) {
+			for (int k = 1; k < nz-1; k++) {
+				int grid_id = get_idx(i, j, k);
+				if (w(grid_id) != 0) {
+					Eigen::RowVector3d p = Eigen::RowVector3d(i+0.5, j+0.5, k+0.5).cwiseProduct(h);
+					phi(grid_id) = (p - X.row(grid_id)).norm() - r(grid_id);
+
+					if (phi(grid_id) < 0) std::cerr << "inside\n";
+					if (phi(grid_id) > 0) std::cerr << "outside\n";
+				}
+			}
+		}
+	}
+}
+
+
+
+/*
+void Grid::signed_distance(const Eigen::RowVector3d &v1, const Eigen::RowVector3d &pt, double& d) {
+	Eigen::RowVector3d dist = (pt - v1).cwiseQuotient(h);
+	if (dist.minCoeff() > 0 && dist.maxCoeff() < 1) {
+		// inside the cell
+		double d_1 = (pt - v1).maxCoeff();
+		double d_2 = (v1 + h - pt).maxCoeff();
+		d = std::max(d_1, d_2);
+	}
+	else {
+		// outside the cell
+		Eigen::RowVector3d x = pt;
+		x = x.cwiseMax(v1);
+		x = x.cwiseMin(v1 + h);
+		d = (x - pt).norm();
+	}
+}
+
+void Grid::sweep_phi(Particle& particles) {
+	
+	const auto& solve_distance = [&](const Eigen::RowVector3i &dir, const int& xi, const int& yi, const int& zi) {
+		int idx = get_idx(xi, yi, zi);
+		int idx0 = get_idx(xi + dir(0), yi, zi);
+		int idx1 = get_idx(xi, yi + dir(1), zi);
+		int idx2 = get_idx(xi, yi, zi + dir(2));
+		
+		if (markers(idx) != FLUIDCELL) {
+			Eigen::RowVector3d grid_pt = Eigen::RowVector3d(xi, yi, zi).cwiseProduct(h);
+
+			double d;
+			if (cp(idx0) != -1) {
+				signed_distance(grid_pt, particles.q.row(cp(idx0)), d);
+				if (d < phi(idx)) {
+					phi(idx) = d;
+					cp(idx) = cp(idx0);
+				}
+			}
+			if (cp(idx1) != -1) {
+				signed_distance(grid_pt, particles.q.row(cp(idx1)), d);
+				if (d < phi(idx)) {
+					phi(idx) = d;
+					cp(idx) = cp(idx1);
+				}
+			}
+			if (cp(idx2) != -1) {
+				signed_distance(grid_pt, particles.q.row(cp(idx2)), d);
+				if (d < phi(idx)) {
+					phi(idx) = d;
+					cp(idx) = cp(idx2);
+				}
+			}
+		}
+	};
+
+	// sweep in all eight directions
+	for (int i = 1; i < nx; i++)
+		for (int j = 1; j < ny; j++)
+			for (int k = 1; k < nz; k++)
+				solve_distance(Eigen::RowVector3i(-1, -1, -1), i, j, k);
+	for (int i = 1; i < nx; i++)
+		for (int j = 1; j < ny; j++)
+			for (int k = nz-2; k >= 0; k--)
+				solve_distance(Eigen::RowVector3i(-1, -1, 1), i, j, k);
+	for (int i = 1; i < nx; i++)
+		for (int j = ny-2; j >= 0; j--)
+			for (int k = 1; k < nz; k++)
+				solve_distance(Eigen::RowVector3i(-1, 1, -1), i, j, k);
+	for (int i = 1; i < nx; i++)
+		for (int j = ny - 2; j >= 0; j--)
+			for (int k = nz - 2; k >= 0; k--)
+				solve_distance(Eigen::RowVector3i(-1, 1, 1), i, j, k);
+	for (int i = nx-2; i >= 0; i--)
+		for (int j = 1; j < ny; j++)
+			for (int k = 1; k < nz; k++)
+				solve_distance(Eigen::RowVector3i(1, -1, -1), i, j, k);
+	for (int i = nx - 2; i >= 0; i--)
+		for (int j = 1; j < ny; j++)
+			for (int k = nz - 2; k >= 0; k--)
+				solve_distance(Eigen::RowVector3i(1, -1, 1), i, j, k);
+	for (int i = nx - 2; i >= 0; i--)
+		for (int j = ny - 2; j >= 0; j--)
+			for (int k = 1; k < nz; k++)
+				solve_distance(Eigen::RowVector3i(1, 1, -1), i, j, k);
+	for (int i = nx - 2; i >= 0; i--)
+		for (int j = ny - 2; j >= 0; j--)
+			for (int k = nz - 2; k >= 0; k--)
+				solve_distance(Eigen::RowVector3i(1, 1, 1), i, j, k);
+}
+
+void Grid::sweep_velocity() {
+	int dim0, dim1, dim2;
+	const auto& get_idx2 = [&](const int& xi, const int& yi, const int& zi) {
+		return xi * dim1 * dim2 + yi * dim2 + zi;
+	};
+	
+	// first for x
+	sweep_dir(0);
+	dim0 = nx + 1; dim1 = ny; dim2 = nz;
+	for (int i = 0; i < dim0; i++) {
+		for (int j = 0; j < dim1; j++) {
+			Vx(get_idx2(i, j, 0)) = Vx(get_idx2(i, j, 1));
+			Vx(get_idx2(i, j, dim2 - 1)) = Vx(get_idx2(i, j, dim2 - 2));
+		}
+		for (int k = 0; k < dim2; k++) {
+			Vx(get_idx2(i, 0, k)) = Vx(get_idx2(i, 1, k));
+			Vx(get_idx2(i, dim1 - 1, k)) = Vx(get_idx2(i, dim1 - 2, k));
+		}
+	}
+	for (int j = 0; j < dim1; j++) {
+		for (int k = 0; k < dim2; k++) {
+			Vx(get_idx2(0, j, k)) = Vx(get_idx2(1, j, k));
+			Vx(get_idx2(dim0, j, k)) = Vx(get_idx2(dim0 - 2, j, k));
+		}
+	}
+
+	// now for y
+	sweep_dir(1);
+	dim0 = nx; dim1 = ny + 1; dim2 = nz;
+	for (int i = 0; i < dim0; i++) {
+		for (int j = 0; j < dim1; j++) {
+			Vy(get_idx2(i, j, 0)) = Vy(get_idx2(i, j, 1));
+			Vy(get_idx2(i, j, dim2 - 1)) = Vy(get_idx2(i, j, dim2 - 2));
+		}
+		for (int k = 0; k < dim2; k++) {
+			Vy(get_idx2(i, 0, k)) = Vy(get_idx2(i, 1, k));
+			Vy(get_idx2(i, dim1 - 1, k)) = Vy(get_idx2(i, dim1 - 2, k));
+		}
+	}
+	for (int j = 0; j < dim1; j++) {
+		for (int k = 0; k < dim2; k++) {
+			Vy(get_idx2(0, j, k)) = Vy(get_idx2(1, j, k));
+			Vy(get_idx2(dim0, j, k)) = Vy(get_idx2(dim0 - 2, j, k));
+		}
+	}
+
+	// now for z
+	sweep_dir(2);
+	dim0 = nx; dim1 = ny; dim2 = nz + 1;
+	for (int i = 0; i < dim0; i++) {
+		for (int j = 0; j < dim1; j++) {
+			Vz(get_idx2(i, j, 0)) = Vz(get_idx2(i, j, 1));
+			Vz(get_idx2(i, j, dim2 - 1)) = Vz(get_idx2(i, j, dim2 - 2));
+		}
+		for (int k = 0; k < dim2; k++) {
+			Vz(get_idx2(i, 0, k)) = Vz(get_idx2(i, 1, k));
+			Vz(get_idx2(i, dim1 - 1, k)) = Vz(get_idx2(i, dim1 - 2, k));
+		}
+	}
+	for (int j = 0; j < dim1; j++) {
+		for (int k = 0; k < dim2; k++) {
+			Vz(get_idx2(0, j, k)) = Vz(get_idx2(1, j, k));
+			Vz(get_idx2(dim0, j, k)) = Vz(get_idx2(dim0 - 2, j, k));
+		}
+	}
+}
+
+
+void Grid::sweep_dir(const int& dir) {
+
+
+	const auto& sweep_x = [&](int i0, int i1, int j0, int j1, int k0, int k1) {
+		int di = (i0 < i1) ? 1 : -1;
+		int dj = (j0 < j1) ? 1 : -1;
+		int dk = (k0 < k1) ? 1 : -1;
+
+		int grid_id;
+		for (int i = i0; i != i1; i += di) {
+			for (int j = j0; j != j1; j += dj) {
+				for (int k = k0; k != k1; k += dk) {
+					if (markers(get_idx(i - 1, j, k)) == AIRCELL && markers(get_idx(i, j, k) == AIRCELL)) {
+						double dq = di * (phi(get_idx(i, j, k)) - phi(get_idx(i - 1, j, k)));
+						if (dq < 0) continue;
+
+					}
+
+				}
+			}
+		}
+	};
+
+	int dim0 = (dir == 0) ? nx + 1 : nx;
+	int dim1 = (dir == 1) ? ny + 1 : ny;
+	int dim2 = (dir == 2) ? nz + 1 : nz;
+
+	// sweep from all 8 directions
+}
+*/
+
+
+
+
+
+
+
+
+

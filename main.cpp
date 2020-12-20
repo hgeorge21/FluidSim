@@ -66,6 +66,7 @@ int main(int argc, char** argv) {
 		advect_velocity(grid, particles, dt);
 		//std::cerr << "Now transfer_to_grid" << std::endl;
 		transfer_to_grid(grid, particles);
+		grid.init_phi(particles);
 		//std::cerr << "Now add_gravity" << std::endl;
 		add_gravity(grid, particles, gravity, dt);
 		//std::cerr << "Now apply_boundary_condition" << std::endl;

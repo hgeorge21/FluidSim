@@ -10,7 +10,7 @@ void transfer_to_grid(Grid &grid, Particle &particles) {
 	int ny = grid.ny;
 	int nz = grid.nz;
 	Eigen::RowVector3d h = grid.h.transpose();
-	Eigen::RowVector3d corner = grid.left_lower_corner.transpose();
+	Eigen::RowVector3d corner = grid.left_lower_corner;
 
 	Eigen::VectorXd sum; 
 	double t_before, t_after;
@@ -30,9 +30,7 @@ void transfer_to_grid(Grid &grid, Particle &particles) {
 	// update the grid markers
 	grid.markers.setConstant(AIRCELL);
 	for (int n = 0; n < particles.q.rows(); n++) {
-		Eigen::RowVector3d x = particles.q.row(n) - grid.left_lower_corner.transpose();
-		Eigen::RowVector3d d = x.cwiseQuotient(h);
-
+		Eigen::RowVector3d d = (particles.q.row(n) - corner).cwiseQuotient(h);
 		int idx = int(d(0)) * (ny * nz) + int(d(1)) * nz + int(d(2));
 		grid.markers(idx) = int(FLUIDCELL);
 	}
