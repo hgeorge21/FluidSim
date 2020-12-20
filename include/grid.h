@@ -55,24 +55,16 @@ public:
 	void pressure_projection();
 
 	void get_divergence();
-	void get_divergence2();
-
-	void check_divergence();
-	void check_laplacian();
 	
 	void solve_pressure();
 	void update_velocity();
 	void save_grids();
 
-	void print_pressure();
-	void check_pressure();
-	void print_cell();
 
 private:
 	void get_divergence_operator();
 	void get_laplacian_operator();
 	void get_gradient_operator();
-	void get_laplacian_operator2();
 };
 
 

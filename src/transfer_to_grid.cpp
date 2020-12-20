@@ -12,8 +12,6 @@ void transfer_to_grid(Grid &grid, Particle &particles) {
 	Eigen::RowVector3d h = grid.h.transpose();
 	Eigen::RowVector3d corner = grid.left_lower_corner.transpose();
 
-	std::cerr << "Now transfer_to_grid: interpolate" << std::endl;
-
 	Eigen::VectorXd sum; 
 	double t_before, t_after;
 	interpolate(nx, ny, nz, 0, h, corner, particles.q, sum, Wx);
@@ -29,8 +27,6 @@ void transfer_to_grid(Grid &grid, Particle &particles) {
 	grid.Vz = (grid.Vz).cwiseQuotient(sum);
 
 
-
-	std::cerr << "Now transfer_to_grid: set FLUID" << std::endl;
 	// update the grid markers
 	grid.markers.setConstant(AIRCELL);
 	for (int n = 0; n < particles.q.rows(); n++) {
@@ -40,7 +36,5 @@ void transfer_to_grid(Grid &grid, Particle &particles) {
 		int idx = int(d(0)) * (ny * nz) + int(d(1)) * nz + int(d(2));
 		grid.markers(idx) = int(FLUIDCELL);
 	}
-
-	std::cerr << "Now transfer_to_grid: save grids" << std::endl;
 	grid.save_grids();
 }

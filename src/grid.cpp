@@ -80,11 +80,10 @@ void Grid::add_fluid(Particle& particles, const Eigen::Vector3d &v1, const Eigen
 	std::default_random_engine generator(seed);
 	std::uniform_real_distribution<double> dist(0., 1.);
 
-	// the first & last of each dimension is solid only
 	int fluid_height = ceil(height / hf(1));
-	int ny_f = ny_ - 2;
-	int nx_f = nx_ - 2;
-	int nz_f = nz_ - 2;
+	int ny_f = ny_;
+	int nx_f = nx_;
+	int nz_f = nz_;
 
 	int n_fluid_grids = nx_f * ny_f * nz_f;
 	particles.q = Eigen::MatrixXd(n_per_cell * n_fluid_grids, 3);
@@ -96,11 +95,11 @@ void Grid::add_fluid(Particle& particles, const Eigen::Vector3d &v1, const Eigen
 				int idx = i * (ny_f * nz_f) + j * nz_f + k;
 
 				// generate fluid particles
-				Eigen::RowVector3d lower_corner = v1 + 2*h + hf.cwiseProduct(Eigen::Vector3d(i, j, k));
+				Eigen::RowVector3d lower_corner = v1 + hf.cwiseProduct(Eigen::Vector3d(i, j, k));
 				Eigen::MatrixXd q_ = Eigen::MatrixXd::NullaryExpr(n_per_cell, 3, [&]() { return dist(generator);  });
-				q_.col(0) = h(0) * q_.col(0);
-				q_.col(1) = h(1) * q_.col(1);
-				q_.col(2) = h(2) * q_.col(2);
+				q_.col(0) = hf(0) * q_.col(0);
+				q_.col(1) = hf(1) * q_.col(1);
+				q_.col(2) = hf(2) * q_.col(2);
 				q_ = q_.rowwise() + lower_corner;
 				particles.q.block(n_per_cell * idx, 0, n_per_cell, 3) = q_;
 				particles.type.block(n_per_cell * idx, 0, n_per_cell, 1) = FLUID_P * Eigen::VectorXi::Ones(n_per_cell);
@@ -142,88 +141,20 @@ void Grid::apply_boundary_condition() {
 }
 
 
+/*** 
+// The operators, for loop would actually be faster...
+***/
 void Grid::get_divergence_operator() {
 	divergence_op(nx, ny, nz, 0, h, markers, Dx);
 	divergence_op(nx, ny, nz, 1, h, markers, Dy);
 	divergence_op(nx, ny, nz, 2, h, markers, Dz);
 }
 
-
-int Grid::get_idx(const int& xi, const int& yi, const int& zi) {
-	return xi * ny * nz + yi * nz + zi;
-}
-
-
-void Grid::pressure_projection() {
-	//print_cell();
-
-	std::cout << "Now get gradient op" << std::endl;
-	get_gradient_operator();
-
-	std::cout << "Now get divergence op" << std::endl;
-	get_divergence_operator();
-
-	//get_divergence();
-	std::cout << "Now get divergence2" << std::endl;
-	get_divergence2();
-
-	get_laplacian_operator();
-
-	solve_pressure();
-	update_velocity();
-	//print_cell(); 
-}
-
-
-// Get divergence of v with operator
-void Grid::get_divergence() {
-	divergence = Dx * Vx + Dy * Vy + Dz * Vz;
-	divergence = (density / dt) * divergence;
-	std::cout << "Divergence norm: " << divergence.norm() << std::endl;
-}
-
-
-// Directly compute divergence
-void Grid::get_divergence2() {
-	const auto& get_idx2 = [&](int xi, int yi, int zi, int dim) { 
-		int dim0 = (dim == 0) ? nx + 1 : nx;
-		int dim1 = (dim == 1) ? ny + 1 : ny;
-		int dim2 = (dim == 2) ? nz + 1 : nz; 
-		return xi * dim1 * dim2 + yi * dim2 + zi; 
-	};
-	divergence.resize(n_grids);
-	divergence.setZero();
-	for (int i = 0; i < nx; ++i) {
-		for (int j = 0; j < ny; ++j) {
-			for (int k = 0; k < nz; ++k) {
-				int idx = get_idx(i, j, k);
-
-				//std::cout << "Now markers" << std::endl;
-
-				if (markers[idx] == FLUIDCELL)
-
-				//std::cout << "Now divergence and Vxyz" << std::endl;
-
-					divergence[idx] =
-					(Vx[get_idx2(i + 1, j, k, 0)] - Vx[get_idx2(i, j, k, 0)]) / h(0) +
-					(Vy[get_idx2(i, j + 1, k, 1)] - Vy[get_idx2(i, j, k, 1)]) / h(1) +
-					(Vz[get_idx2(i, j, k + 1, 2)] - Vz[get_idx2(i, j, k, 2)]) / h(2);
-			}
-		}
-	}
-	divergence = (density / dt) * divergence;
-	std::cout << "Divergence norm: " << divergence.norm() << std::endl;
-
-	check_divergence();
-}
-
-
 void Grid::get_gradient_operator() {
 	gradient_op(nx, ny, nz, 0, h, markers, Gx);
 	gradient_op(nx, ny, nz, 1, h, markers, Gy);
 	gradient_op(nx, ny, nz, 2, h, markers, Gz);
 }
-
 
 // Directly get laplacian operator - matrix A
 void Grid::get_laplacian_operator() {
@@ -244,43 +175,43 @@ void Grid::get_laplacian_operator() {
 				if (markers[index] == FLUIDCELL) {
 					trip.push_back(T(index, index, -2. * inv_h.sum()));
 
-					index2 = get_idx(i - 1, j, k); 
-					if (markers[index2] != SOLIDCELL){
+					index2 = get_idx(i - 1, j, k);
+					if (markers[index2] != SOLIDCELL) {
 						trip.push_back(T(index, index2, inv_h(0)));
 					}
 					else
 						trip.push_back(T(index, index, inv_h(0))); // if solid, the entry for this in gradient matrix D would be 0
 
 					index2 = get_idx(i + 1, j, k);
-					if (markers[index2] != SOLIDCELL){
+					if (markers[index2] != SOLIDCELL) {
 						trip.push_back(T(index, index2, inv_h(0)));
 					}
 					else
-						trip.push_back(T(index, index, inv_h(0))); 
+						trip.push_back(T(index, index, inv_h(0)));
 
 					index2 = get_idx(i, j - 1, k);
-					if (markers[index2] != SOLIDCELL){
+					if (markers[index2] != SOLIDCELL) {
 						trip.push_back(T(index, index2, inv_h(1)));
 					}
 					else
 						trip.push_back(T(index, index, inv_h(1)));
 
 					index2 = get_idx(i, j + 1, k);
-					if (markers[index2] != SOLIDCELL){
+					if (markers[index2] != SOLIDCELL) {
 						trip.push_back(T(index, index2, inv_h(1)));
 					}
 					else
 						trip.push_back(T(index, index, inv_h(1)));
 
 					index2 = get_idx(i, j, k - 1);
-					if (markers[index2] != SOLIDCELL){
+					if (markers[index2] != SOLIDCELL) {
 						trip.push_back(T(index, index2, inv_h(2)));
 					}
 					else
 						trip.push_back(T(index, index, inv_h(2)));
 
 					index2 = get_idx(i, j, k + 1);
-					if (markers[index2] != SOLIDCELL){
+					if (markers[index2] != SOLIDCELL) {
 						trip.push_back(T(index, index2, inv_h(2)));
 					}
 					else
@@ -291,38 +222,63 @@ void Grid::get_laplacian_operator() {
 	}
 	A.setFromTriplets(trip.begin(), trip.end());
 	// check self-adjoint
-	if (!A.transpose().conjugate().isApprox(A))
-		std::cout << "Warning: Matrix A not self-adjoint" << std::endl;
-	else 
-		std::cout << "Matrix A IS self-adjoint, can switch ConjugateGradient to solve A instead" << std::endl;
-
-	check_laplacian();
+	//if (!A.transpose().conjugate().isApprox(A))
+	//	std::cout << "Warning: Matrix A not self-adjoint" << std::endl;
+	//else
+	//	std::cout << "Matrix A IS self-adjoint, can switch ConjugateGradient to solve A instead" << std::endl;
 }
 
-// Get A = B * D
-void Grid::get_laplacian_operator2() {
+
+
+
+int Grid::get_idx(const int& xi, const int& yi, const int& zi) {
+	return xi * ny * nz + yi * nz + zi;
+}
+
+
+void Grid::pressure_projection() {
 	get_gradient_operator();
-	Eigen::MatrixXd B, Bx_, By_, Bz_, D, Dx_, Dy_, Dz_;
-
-	Bx_ = Eigen::MatrixXd(Dx); // Note Dx is divergence instead of gradient matrix
-	By_ = Eigen::MatrixXd(Dy);
-	Bz_ = Eigen::MatrixXd(Dz);
-	B.resize(n_grids, Dx.cols() + Dy.cols() + Dz.cols());
-	B << Bx_, By_, Bz_;
-
-	Dx_ = Eigen::MatrixXd(Gx);
-	Dy_ = Eigen::MatrixXd(Gy);
-	Dz_ = Eigen::MatrixXd(Gz);
-	D.resize(Gx.rows() + Gy.rows() + Gz.rows(), n_grids);
-	D << Dx_, Dy_, Dz_;
-
-	A = (B * D).sparseView();
+	get_divergence();
+	get_laplacian_operator();
+	solve_pressure();
+	update_velocity();
 }
+
+
+// Directly compute divergence
+void Grid::get_divergence() {
+	const auto& get_idx2 = [&](int xi, int yi, int zi, int dim) { 
+		int dim0 = (dim == 0) ? nx + 1 : nx;
+		int dim1 = (dim == 1) ? ny + 1 : ny;
+		int dim2 = (dim == 2) ? nz + 1 : nz; 
+		return xi * dim1 * dim2 + yi * dim2 + zi; 
+	};
+	divergence.resize(n_grids);
+	divergence.setZero();
+	for (int i = 0; i < nx; ++i) {
+		for (int j = 0; j < ny; ++j) {
+			for (int k = 0; k < nz; ++k) {
+				int idx = get_idx(i, j, k);
+
+				if (markers[idx] == FLUIDCELL) {
+					divergence[idx] =
+						(Vx[get_idx2(i + 1, j, k, 0)] - Vx[get_idx2(i, j, k, 0)]) / h(0) +
+						(Vy[get_idx2(i, j + 1, k, 1)] - Vy[get_idx2(i, j, k, 1)]) / h(1) +
+						(Vz[get_idx2(i, j, k + 1, 2)] - Vz[get_idx2(i, j, k, 2)]) / h(2);
+
+				}
+			}
+		}
+	}
+	divergence = (density / dt) * divergence;
+}
+
+
 
 // Solve pressure by Conjugate Gradient Method
 void Grid::solve_pressure() {
 	Eigen::ConjugateGradient<Eigen::SparseMatrix<double>, Eigen::Lower | Eigen::Upper> cg;
-	cg.setTolerance(1e-8);
+	cg.setTolerance(1e-5);
 
 	// not sure if A is self-adjoint - use AT*A instead
 	cg.compute(A.transpose() * A);
@@ -331,7 +287,6 @@ void Grid::solve_pressure() {
 	pressure = cg.solve(A.transpose() * divergence);
 	if (cg.info() != Eigen::Success)
 		std::cerr << "Warning: Conjugate Gradient Solver solving failed. However decomposition seems work" << std::endl;
-//	print_pressure();
 }
 
 
@@ -339,72 +294,6 @@ void Grid::update_velocity() {
 	Vx -= dt / density * Gx * pressure;
 	Vy -= dt / density * Gy * pressure;
 	Vz -= dt / density * Gz * pressure;
-}
-
-
-// All the checking and printing
-//
-//
-
-void Grid::print_pressure() {
-	
-	for (int level = ny - 1; level >= 0; level--) {
-		double pressure_per_lv = 0.0;
-		for (int x = 1; x < nx - 1; x++) {
-			for (int z = 1; z < nz - 1; z++){
-				int idx = get_idx(x, level, z);
-				pressure_per_lv += pressure[idx];
-			}
-		}
-		std::cout << "Avg pressure at level " << level << ": " << pressure_per_lv/(double)((nx-2)*(nz-2)) << std::endl;
-	}
-}
-
-void Grid::print_cell() {
-	for (int y = ny - 1; y >= 0 ; y--) {
-		std::cout << "Level " << y << "-------------------------------\n";
-		for (int x = 0; x < nx; x++) {
-			for (int z = 0; z < nz; z++) {
-				int idx = get_idx(x, y, z);
-				char type = (markers[idx] == FLUIDCELL) ? 'F' : (markers[idx] == SOLIDCELL) ? 'S' : 'A';
-				std::cout << type << ' ';
-			}
-			std::cout << std::endl;
-		}
-		std::cout << std::endl;
-	}
-}
-
-// Assume to be called inside get_divergence2
-void Grid::check_divergence() {
-	Eigen::VectorXd divergence_ = Dx * Vx + Dy * Vy + Dz * Vz;
-	divergence_ = (density / dt) * divergence_;
-	if (!divergence_.isApprox(divergence)) // initially they are both 0, so not the same
-		std::cerr << "Warining: Divergence is not the same" << std::endl;
-	else
-		std::cerr << "Checking: Divergence IS the same" << std::endl;
-}
-
-// check if gradient matrix A = B * D
-void Grid::check_laplacian() {
-	Eigen::MatrixXd B, Bx_, By_, Bz_, D, Dx_, Dy_, Dz_;
-
-	Bx_ = Eigen::MatrixXd(Dx); // Note Dx is divergence instead of gradient matrix
-	By_ = Eigen::MatrixXd(Dy);
-	Bz_ = Eigen::MatrixXd(Dz);
-	B.resize(n_grids, Dx.cols() + Dy.cols() + Dz.cols());
-	B << Bx_ , By_ , Bz_;
-
-	Dx_ = Eigen::MatrixXd(Gx);
-	Dy_ = Eigen::MatrixXd(Gy);
-	Dz_ = Eigen::MatrixXd(Gz);
-	D.resize(Gx.rows() + Gy.rows() + Gz.rows(), n_grids);
-	D << Dx_, Dy_, Dz_;
-
-	if (!(B * D).sparseView().isApprox(A))
-		std::cerr << "Warning: A != B * D" << std::endl;
-	else
-		std::cerr << "Checking: A = B * D" << std::endl;
 }
 
 
