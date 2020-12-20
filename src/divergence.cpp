@@ -31,8 +31,7 @@ void divergence_op(
 			for (int k = 0; k < nz; k++) {
 				int index = get_idx(i, j, k);
 				int index2 = (dim == 0) ? get_idx2(i + 1, j, k) :
-					(dim == 1) ? get_idx2(i, j + 1, k) :
-					get_idx2(i, j, k + 1);
+					(dim == 1) ? get_idx2(i, j + 1, k) : get_idx2(i, j, k + 1);
 				int index3 = get_idx2(i, j, k);
 				if (markers(index) == FLUIDCELL) {
 					trip1.emplace_back(T(index, index2, 1. / h(dim)));

@@ -36,10 +36,10 @@ int main(int argc, char** argv) {
 	std::cout << "\n";
 
 	// load mesh
-	Eigen::MatrixXd V, V1;
-	Eigen::MatrixXi F, F1;
+	Eigen::MatrixXd V;
+	Eigen::MatrixXi F;
 	
-	double dt = 0.3;
+	double dt = 0.1;
 	double height = 0.3;
 	Eigen::Vector3d h = Eigen::Vector3d(0.1, 0.1, 0.1);
 	Eigen::Vector3d gravity = Eigen::Vector3d(0, -0.098, 0);
@@ -47,15 +47,14 @@ int main(int argc, char** argv) {
 	Eigen::Vector3d right_upper_corner = Eigen::Vector3d(0.5, 0.5, 0.5);
 
 	// for visualizing boundary
-	create_rectangle(left_lower_corner, right_upper_corner, V, F);
-	create_rectangle(left_lower_corner + h, right_upper_corner - h, V1, F1);
+	create_rectangle(left_lower_corner + h, right_upper_corner - h, V, F);
 
 	Particle particles;
-	Grid grid(dt, left_lower_corner, right_upper_corner, h, PIC);
+	Grid grid(dt, left_lower_corner, right_upper_corner, h, FLIP);
 
 	// create grid
 	grid.init();
-	grid.add_fluid(particles, Eigen::Vector3d(-0.1, -0.1, -0.1), Eigen::Vector3d(0.2, 0.2, 0.2), Eigen::Vector3d(0.05, 0.05, 0.05), height);
+	grid.add_fluid(particles, Eigen::Vector3d(-0.2, -0.2, -0.2), Eigen::Vector3d(0.2, 0.2, 0.2), Eigen::Vector3d(0.03, 0.03, 0.03), height);
 
 	// a complete time step
 	const auto& step_update = [&]() {
@@ -89,7 +88,7 @@ int main(int argc, char** argv) {
 		const Eigen::RowVector3d blue(0.1, 0.35, 0.75);
 		const Eigen::RowVector3d white(0.9, 0.9, 0.9);
 		viewer.data_list[airID].set_points(air_particles, (1. - (1. - white.array()) * .8));
-		viewer.data_list[fluidID].set_points(fluid_particles, (1. - (1. - blue.array()) * .8));
+		viewer.data_list[fluidID].set_points(fluid_particles, (1. - (1. - white.array()) * .8));
 	};
 
 	const auto &update = [&]() {
@@ -126,8 +125,8 @@ int main(int argc, char** argv) {
 
 	
 
-	//std::thread simulation_thread(update_forever);
-	//simulation_thread.detach();
+	std::thread simulation_thread(update_forever);
+	simulation_thread.detach();
 
 	// start the viewer and set the mesh
 	viewer.data().set_mesh(V, F);
