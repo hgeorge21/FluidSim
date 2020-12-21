@@ -65,7 +65,7 @@ int main(int argc, char** argv) {
 
 	Eigen::MatrixXd Vr;
 	Eigen::MatrixXi Fr;
-	igl::read_triangle_mesh("../../../data/bunny.off", Vr, Fr);
+	igl::read_triangle_mesh("../data/bunny.off", Vr, Fr);
 	Vr = 3 * Vr;
 	Vr.col(1) = Vr.col(1) + Eigen::VectorXd::Constant(Vr.rows(), 0.3);
 
