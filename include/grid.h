@@ -5,12 +5,6 @@
 #include <Eigen/Sparse>
 #include <particles.h>
 
-enum transfer_method {
-	PIC,
-	FLIP
-};
-
-
 class Grid {
 
 #define AIRCELL 1
@@ -20,7 +14,7 @@ class Grid {
 public:
 	double dt;
 	double density = 1.0;
-	transfer_method method;
+	int theta; // for FLIP / PIC blend
 
 	Eigen::RowVector3d h;
 	Eigen::RowVector3d left_lower_corner;
@@ -37,18 +31,18 @@ public:
 	Eigen::VectorXi fluid_map; // mapping grid to fluid index
 	Eigen::VectorXd Vx_, Vy_, Vz_; // saved grid velocity
 
-	Grid(double dt_, const Eigen::Vector3d& corner1, const Eigen::Vector3d& corner2, double h_, transfer_method method_)
-		:dt(dt_), left_lower_corner(corner1), right_upper_corner(corner2), h(h_* Eigen::Vector3d::Ones()), method(method_)
+	Grid(double dt_, const Eigen::Vector3d& corner1, const Eigen::Vector3d& corner2, double h_, int blend_weight)
+		:dt(dt_), left_lower_corner(corner1), right_upper_corner(corner2), h(h_* Eigen::Vector3d::Ones()), theta(blend_weight)
 	{}
 
-	Grid(double dt_, const Eigen::Vector3d& corner1, const Eigen::Vector3d& corner2, const Eigen::Vector3d& h_, transfer_method method_)
-		:dt(dt_), left_lower_corner(corner1), right_upper_corner(corner2), h(h_), method(method_)
+	Grid(double dt_, const Eigen::Vector3d& corner1, const Eigen::Vector3d& corner2, const Eigen::Vector3d& h_, int blend_weight)
+		:dt(dt_), left_lower_corner(corner1), right_upper_corner(corner2), h(h_), theta(blend_weight)
 	{}
 
 	int get_idx(const int& xi, const int& yi, const int& zi);
 
 	void init();
-	void create_free_boundary();
+	void create_free_boundary(Particle &particles);
 	void apply_boundary_condition();
 	void save_grids();
 

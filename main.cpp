@@ -36,7 +36,9 @@ int main(int argc, char** argv) {
   -       Decrease the number of particles per cell
   R,r     Resets the simulation
   M,m     Toggle between free surface or without
-  F,f     Toggle between FLIP and PIC
+  F,f     Toggle between FLIP and PIC or a blend
+  C       Increase weighting of PIC by 0.1 in PIC/FLIP blend
+  c       Decrease weighting of PIC by 0.1 in PIC/FLIP blend
  
   To run continuously, start the program with any argument.
     )";
@@ -61,7 +63,7 @@ int main(int argc, char** argv) {
 	// for visualizing boundary
 	create_rectangle(left_lower_corner + h, right_upper_corner - h, V, F);
 	Particle particles;
-	Grid grid(dt, left_lower_corner, right_upper_corner, h, FLIP);
+	Grid grid(dt, left_lower_corner, right_upper_corner, h, 0);
 
 	Eigen::MatrixXd Vr;
 	Eigen::MatrixXi Fr;
@@ -92,7 +94,7 @@ int main(int argc, char** argv) {
 		if (!use_free_boundary)
 			solve_pressure(grid);
 		else {
-			grid.create_free_boundary();
+			grid.create_free_boundary(particles);
 			solve_pressure_free_surface(grid);
 		}
 		pressure_projection(grid);
@@ -136,7 +138,7 @@ int main(int argc, char** argv) {
 		case 'm':
 		case 'M':
 			use_free_boundary = !use_free_boundary;
-			std::cout << "Changed to " << ((use_free_boundary) ? "free surface" : " without free surface") << std::endl;
+			std::cout << "Changed to " << ((use_free_boundary) ? "free surface" : "without free surface") << std::endl;
 			break;
 		case '+':
 			n_per_cell += 1;
@@ -152,8 +154,16 @@ int main(int argc, char** argv) {
 			break;
 		case 'F':
 		case 'f':
-			grid.method = (grid.method == transfer_method::FLIP) ? transfer_method::PIC : transfer_method::FLIP;
-			std::cout << "Change method to " << ((grid.method == transfer_method::FLIP) ? "FLIP" : "PIC") << std::endl;
+			grid.theta = (grid.theta == 10) ? 0 : (grid.theta == 0) ? 5 : 10;
+			std::cout << "Change method to " << ((grid.theta == 0) ? "PIC" : (grid.theta == 10) ? "FLIP" : "Blend") << std::endl;
+			break;
+		case 'C':
+			grid.theta = std::min(10, grid.theta - 1);
+			std::cout << "PIC/FLIP weighting is: " << 1. - 0.1*grid.theta << "/" << 0.1*grid.theta << std::endl;
+			break;
+		case 'c':
+			grid.theta = std::max(0, grid.theta + 1);
+			std::cout << "PIC/FLIP weighting is: " << 1. - 0.1*grid.theta << "/" << 0.1*grid.theta << std::endl;
 			break;
 		default:
 			return false;
