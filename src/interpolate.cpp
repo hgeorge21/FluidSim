@@ -1,6 +1,4 @@
 #include <interpolate.h>
-#include <omp.h>
-#include <iostream>
 
 
 void trilinear_interpolation(const Eigen::RowVector3d& d, Eigen::VectorXd& w) {
