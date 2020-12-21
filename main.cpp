@@ -42,7 +42,7 @@ int main(int argc, char** argv) {
     )";
 	std::cout << "\n";
 
-	// load mesh
+	// create mesh
 	Eigen::MatrixXd V;
 	Eigen::MatrixXi F;
 	Eigen::MatrixXd CM;
@@ -56,18 +56,27 @@ int main(int argc, char** argv) {
 
 	Eigen::Vector3d fluid_v1 = Eigen::Vector3d(-0.3, -0.9, -0.3);
 	Eigen::Vector3d fluid_v2 = Eigen::Vector3d(0.3, 0.1, 0.3);
-	Eigen::Vector3d fluid_hf = Eigen::Vector3d(0.04, 0.04, 0.04);
+	Eigen::Vector3d fluid_hf = Eigen::Vector3d(0.05, 0.05, 0.05);
 
 	// for visualizing boundary
 	create_rectangle(left_lower_corner + h, right_upper_corner - h, V, F);
 	Particle particles;
 	Grid grid(dt, left_lower_corner, right_upper_corner, h, FLIP);
 
+	Eigen::MatrixXd Vr;
+	Eigen::MatrixXi Fr;
+	igl::read_triangle_mesh("../../../data/bunny.off", Vr, Fr);
+	Vr = 3 * Vr;
+	Vr.col(1) = Vr.col(1) + Eigen::VectorXd::Constant(Vr.rows(), 0.3);
+
 
 	const auto& setup = [&]() {
 		// create grid and add particles
 		grid.init();
-		add_particles(grid, particles, fluid_v1, fluid_v2, fluid_hf, n_per_cell);
+		if (Vr.rows() > 0)
+			add_particles(grid, particles, fluid_v1, fluid_v2, fluid_hf, n_per_cell, Vr, Fr);
+		else
+			add_particles(grid, particles, fluid_v1, fluid_v2, fluid_hf, n_per_cell);
 		double ymin = particles.q.col(1).minCoeff();
 		double ymax = particles.q.col(1).maxCoeff();
 		igl::colormap(cmap_type, particles.q.col(1), ymin, ymax, CM);
