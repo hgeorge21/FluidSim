@@ -5,43 +5,54 @@
 #include <Eigen/Sparse>
 #include <particles.h>
 
+enum transfer_method {
+	PIC,
+	FLIP
+};
+
+
 class Grid {
 
-#define AIRCELL 0
-#define FLUIDCELL 1
-#define SOLIDCELL 2
+#define AIRCELL 1
+#define FLUIDCELL -1
+#define SOLIDCELL 0
 
 public:
-	Eigen::Vector3d h;
-	Eigen::Vector3d left_lower_corner;
-	Eigen::Vector3d right_upper_corner;
+	double dt;
+	double density = 1.0;
+	transfer_method method;
 
-	int nx, ny, nz;
-	double density;
+	Eigen::RowVector3d h;
+	Eigen::RowVector3d left_lower_corner;
+	Eigen::RowVector3d right_upper_corner;
+
+	int num_fluid_cells;
+	int nx, ny, nz, n_grids;
 	Eigen::VectorXd Vx, Vy, Vz;
-	Eigen::VectorXd pressure; // the pressure at each grid
-	Eigen::VectorXi markers;  // marks the type of the cell
+	Eigen::VectorXd pressure;   // nx1 the pressure at each grid
+	Eigen::VectorXi markers;    // nx1 marks the type of the cell
+	Eigen::SparseMatrix<double> A;
 
-	Eigen::SparseMatrix<double> Px, Py, Pz; // selection matrix
-	Eigen::VectorXd Vx_, Vy_, Vz_;
+	Eigen::VectorXd phi; // distance function
+	Eigen::VectorXi fluid_map; // mapping grid to fluid index
+	Eigen::VectorXd Vx_, Vy_, Vz_; // saved grid velocity
 
-	Grid(const Eigen::Vector3d &corner1, const Eigen::Vector3d &corner2, double h_)
-		:left_lower_corner(corner1), right_upper_corner(corner2), h(h_ * Eigen::Vector3d::Ones())
+	Grid(double dt_, const Eigen::Vector3d& corner1, const Eigen::Vector3d& corner2, double h_, transfer_method method_)
+		:dt(dt_), left_lower_corner(corner1), right_upper_corner(corner2), h(h_* Eigen::Vector3d::Ones()), method(method_)
 	{}
 
-	Grid(const Eigen::Vector3d &corner1, const Eigen::Vector3d &corner2, const Eigen::Vector3d &h_)
-		:left_lower_corner(corner1), right_upper_corner(corner2), h(h_)
+	Grid(double dt_, const Eigen::Vector3d& corner1, const Eigen::Vector3d& corner2, const Eigen::Vector3d& h_, transfer_method method_)
+		:dt(dt_), left_lower_corner(corner1), right_upper_corner(corner2), h(h_), method(method_)
 	{}
-	
+
+	int get_idx(const int& xi, const int& yi, const int& zi);
 
 	void init();
-	void add_fluid(Particle& particles, const double& height);
+	void create_free_boundary();
 	void apply_boundary_condition();
 	void save_grids();
 
 private:
 };
-
-
 
 #endif // GRID_H

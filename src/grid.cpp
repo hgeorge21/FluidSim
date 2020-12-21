@@ -1,126 +1,59 @@
 #include <grid.h>
 #include <chrono>
 #include <random>
-
+#include <iostream>
 
 void Grid::init() {
+	// calculate number of cells in each dimension
 	Eigen::Vector3d ns = (right_upper_corner - left_lower_corner).cwiseQuotient(h);
 	nx = ceil(ns(0));
 	ny = ceil(ns(1));
 	nz = ceil(ns(2));
 
 	// initialization
-	int n_grids = nx * ny * nz;
+	n_grids = nx * ny * nz;
+	num_fluid_cells = 0;
 	pressure = Eigen::VectorXd::Zero(n_grids);
-	markers = Eigen::VectorXi::Zero(n_grids);
-
-	// sets up the selection matrix for the boundaries
-	typedef Eigen::Triplet<double> T;
-	std::vector<T> trip_x, trip_y, trip_z;
-
-	Px.resize((nx + 1) * ny * nz, (nx + 1) * ny * nz);
-	Py.resize(nx * (ny+1) * nz, nx * (ny + 1) * nz);
-	Pz.resize(nx * ny * (nz+1), nx * ny * (nz + 1));
-
-	const auto& set_sparse_vec = [&](const int& dim) {
-		int ll0 = (dim == 0) ? 2 : 0;
-		int ll1 = (dim == 1) ? 2 : 0;
-		int ll2 = (dim == 2) ? 2 : 0;
-		
-		int ul0 = (dim == 0) ? nx - 1 : nx;
-		int ul1 = (dim == 1) ? ny - 1 : ny;
-		int ul2 = (dim == 2) ? nz - 1 : nz;
-
-		int dim0 = (dim == 0) ? nx : nx + 1;
-		int dim1 = (dim == 1) ? ny : ny + 1;
-		int dim2 = (dim == 2) ? nz : nz + 1;
-
-		for (int i = ll0; i < ul0; i++) {
-			for (int j = ll1; j < ul1; j++) {
-				for (int k = ll2; k < ul2; k++) {
-					int idx = i * dim1 * dim2 + j * dim2 + k;
-
-					if (dim == 0)
-						trip_x.emplace_back(T(idx, idx, 1.0));
-					if (dim == 1)
-						trip_y.emplace_back(T(idx, idx, 1.0));
-					if (dim == 2)
-						trip_z.emplace_back(T(idx, idx, 1.0));
-				}
-			}
-		}
-	};
-
-	set_sparse_vec(0);
-	set_sparse_vec(1);
-	set_sparse_vec(2);
-	Px.setFromTriplets(trip_x.begin(), trip_x.end());
-	Py.setFromTriplets(trip_y.begin(), trip_y.end());
-	Pz.setFromTriplets(trip_z.begin(), trip_z.end());
+	phi = Eigen::VectorXd::Zero(n_grids);
+	fluid_map = Eigen::VectorXi::Zero(n_grids);
+	markers = Eigen::VectorXi::Constant(n_grids, AIRCELL);
 }
 
-
-void Grid::add_fluid(Particle& particles, const double& height) {
-	Eigen::Vector3d ns = (right_upper_corner - left_lower_corner).cwiseQuotient(h);
-	nx = ceil(ns(0));
-	ny = ceil(ns(1));
-	nz = ceil(ns(2));
-
-	// set random seed for particle generation
-	unsigned seed = std::chrono::system_clock::now().time_since_epoch().count();
-	std::default_random_engine generator(seed);
-	std::uniform_real_distribution<double> dist(0., 1.);
-
-	// the first & last of each dimension is solid only
-	int ny_f = ceil(height / h(1));
-	int nx_f = nx - 2;
-	int nz_f = nz - 2;
-
-	int n_fluid_grids = nx_f * ny_f * nz_f;
-	particles.q = Eigen::MatrixXd(8 * n_fluid_grids, 3); // each cell has 8 particles
-	particles.v = Eigen::MatrixXd::Zero(8 * n_fluid_grids, 3);
-	for (int i = 0; i < nx_f; i++) {
-		for (int j = 0; j < ny_f; j++) {
-			for (int k = 0; k < nz_f; k++) {
-				int idx = i * (ny_f * nz_f) + j * nz_f + k;
-
-				// claim the fluid cells
-				int org_idx = (i + 1) * (ny * nz) + (j + 1) * nz + k + 1;
-				markers(org_idx) = FLUIDCELL;
-
-				// generate fluid particles
-				Eigen::RowVector3d lower_corner = left_lower_corner + h + h.cwiseProduct(Eigen::Vector3d(i, j, k));
-				Eigen::MatrixXd q_ = Eigen::MatrixXd::NullaryExpr(8, 3, [&]() { return dist(generator);  });
-				q_.col(0) = h(0) * q_.col(0);
-				q_.col(1) = h(1) * q_.col(1);
-				q_.col(2) = h(2) * q_.col(2);
-
-				q_ = q_.rowwise() + lower_corner;
-				particles.q.block(8 * idx, 0, 8, 3) = q_;
-			}
-		}
-	}
+int Grid::get_idx(const int& xi, const int& yi, const int& zi) {
+	return xi * ny * nz + yi * nz + zi;
 }
-
 
 
 void Grid::apply_boundary_condition() {
 	int i, j, k;
-	const auto& get_idx = [&](const int& xi, const int& yi, const int& zi) {
-		return xi * ny * nz + yi * nz + zi;
+	int dim0, dim1, dim2;
+	const auto& get_idx2 = [&](const int& xi, const int& yi, const int& zi) {
+		return xi * dim1 * dim2 + yi * dim2 + zi;
 	};
 
-	// boundary cells
+	// boundary cells and filters out velocity
 	for (i = 0; i < nx; i++) {
 		for (j = 0; j < ny; j++) {
 			int k1 = 0; int k2 = nz - 1;
 			markers(get_idx(i, j, k1)) = SOLIDCELL;
 			markers(get_idx(i, j, k2)) = SOLIDCELL;
+
+			dim0 = nx; dim1 = ny; dim2 = nz + 1;
+			Vz(get_idx2(i, j, 0)) = 0.;
+			Vz(get_idx2(i, j, 1)) = 0.;
+			Vz(get_idx2(i, j, nz - 1)) = 0.;
+			Vz(get_idx2(i, j, nz)) = 0.;
 		}
 		for (k = 0; k < nz; k++) {
 			int j1 = 0; int j2 = ny - 1;
 			markers(get_idx(i, j1, k)) = SOLIDCELL;
 			markers(get_idx(i, j2, k)) = SOLIDCELL;
+
+			dim0 = nx; dim1 = ny + 1; dim2 = nz;
+			Vy(get_idx2(i, 0, k)) = 0.;
+			Vy(get_idx2(i, 1, k)) = 0.;
+			Vy(get_idx2(i, ny - 1, k)) = 0.;
+			Vy(get_idx2(i, ny, k)) = 0.;
 		}
 	}
 	for (k = 0; k < nz; k++) {
@@ -128,13 +61,14 @@ void Grid::apply_boundary_condition() {
 			int i1 = 0; int i2 = nx - 1;
 			markers(get_idx(i1, j, k)) = SOLIDCELL;
 			markers(get_idx(i2, j, k)) = SOLIDCELL;
+
+			dim0 = nx + 1; dim1 = ny; dim2 = nz;
+			Vx(get_idx2(0, j, k)) = 0.;
+			Vx(get_idx2(1, j, k)) = 0.;
+			Vx(get_idx2(nx - 1, j, k)) = 0.;
+			Vx(get_idx2(nx, j, k)) = 0.;
 		}
 	}
-
-	// filters out velocity at boundary grids
-	Vx = Px * Vx;
-	Vy = Py * Vy;
-	Vz = Pz * Vz;
 }
 
 
@@ -142,4 +76,46 @@ void Grid::save_grids() {
 	Vx_ = Vx;
 	Vy_ = Vy;
 	Vz_ = Vz;
+}
+
+
+void Grid::create_free_boundary() {
+	phi.setZero();
+	fluid_map.setConstant(-1);
+
+	// get smoothing kernel coefficients
+	double c[4];
+	c[0] = 1.0;
+	c[1] = exp(-1.);
+	c[2] = exp(-2.);
+	c[3] = exp(-3.);
+
+	// performing smoothing on  +-1 marker cells with 3x3x3 Guassian cube
+	int index;
+	int i, j, k, di, dj, dk;
+	int counter = 0;
+	double weight, result;
+	for (i = 1; i < nx - 1; i++)
+		for (j = 1; j < ny - 1; j++)
+			for (k = 1; k < nz - 1; k++) {
+				result = 0.;
+				weight = 0.;
+
+				index = get_idx(i, j, k);
+				for (di = -1; di <= 1; di++)
+					for (dj = -1; dj <= 1; dj++)
+						for (dk = -1; dk <= 1; dk++) {
+							int total = abs(di) + abs(dj) + abs(dk);
+							if (i + di > 0 && i + di < nx - 1 && j + dj > 0 && j + dj < ny - 1 && k + dk > 0 && k + dk < nz - 1) {
+								result += c[total] * markers(get_idx(i + di, j + dj, k + dk));
+								weight += c[total];
+							}
+						}
+				phi(index) = result / weight;
+				if (result < 0) {
+					fluid_map(index) = counter;
+					counter++;
+				}
+			}
+	num_fluid_cells = counter;
 }

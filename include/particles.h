@@ -3,28 +3,23 @@
 
 #include <Eigen/Core>
 
-enum advection_method
-{
-	SIMPLE, RUNGE_KUTTA
-};
 
 class Particle
 {
 
+#define AIR_P   0
+#define FLUID_P 1
+
 public:
-	advection_method method;
+	Eigen::MatrixXd q; // location
+	Eigen::MatrixXd v; // velocity
+	Eigen::VectorXi type; // type of particle (only fluids right now)
 
-	Eigen::MatrixXd q;
-	Eigen::MatrixXd v;
-
-	Particle();
-	~Particle();
+	Particle() {};
+	~Particle() {};
 
 private:
-	
+
 };
-
-
-
 
 #endif // !PARTICLE_H

@@ -11,6 +11,9 @@ option(LIBIGL_WITH_OPENGL_GLFW_IMGUI    "Use ImGui"             ON)
 
 find_package(LIBIGL REQUIRED QUIET)
 
+set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -O2")
+set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -O2")
+
 #include directories
 include_directories(${PROJECT_SOURCE_DIR}/include)
 include_directories(${PROJECT_SOURCE_DIR})
@@ -22,5 +25,5 @@ file(GLOB H_SHARED_FILES ${PROJECT_SOURCE_DIR}/shared/include/*.h)
 file(GLOB CPP_FILES ${PROJECT_SOURCE_DIR}/src/*.cpp)
 
 #build executable 
-add_executable(${PROJECT_NAME} main.cpp ${H_FILES} ${H_SHARED_FILES} ${CPP_FILES})
+add_executable(${PROJECT_NAME} main.cpp ${H_FILES} ${H_SHARED_FILES} ${CPP_FILES} "src/timer.cpp")
 target_link_libraries(${PROJECT_NAME} igl::core igl::opengl igl::opengl_glfw igl::opengl_glfw_imgui)
