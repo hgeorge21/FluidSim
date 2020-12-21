@@ -37,6 +37,8 @@ int main(int argc, char** argv) {
   R,r     Resets the simulation
   M,m     Toggle between free surface or without
   F,f     Toggle between FLIP and PIC
+ 
+  To run continuously, start the program with any argument.
     )";
 	std::cout << "\n";
 
