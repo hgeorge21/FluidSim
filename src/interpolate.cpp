@@ -96,6 +96,7 @@ void interpolate(
 
     W.setFromTriplets(trip.begin(), trip.end());
 
+    // weights for normalizing when going from particle to grid
     sum = Eigen::VectorXd::Ones(n_particles);
     sum = W.transpose() * sum;
     sum = sum.unaryExpr([](double x) { return (x == 0.) ? 1.0 : x; });

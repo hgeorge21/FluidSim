@@ -7,6 +7,7 @@
 #include <grid.h>
 #include <particles.h>
 
+// Performs pressure projection update
 void pressure_projection(Grid& grid);
 
 #endif // !PRESSURE_PROJ_H

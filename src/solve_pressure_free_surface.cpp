@@ -1,5 +1,4 @@
 #include <solve_pressure_free_surface.h>
-#include <iostream>
 
 void solve_pressure_free_surface(Grid& grid) {
 	int nx = grid.nx;
@@ -33,8 +32,10 @@ void solve_pressure_free_surface(Grid& grid) {
 
 	const auto& set_entry = [&](const int &xi, const int &yi, const int &zi, const int &dir) {
 		int index2 = get_idx(xi, yi, zi);
-		if (grid.markers[index2] != SOLIDCELL) {
+		if (grid.markers[index2] != SOLIDCELL) { // make sure it's not solid cell
 			trip.push_back(T(fcell_num, fcell_num, -1. * inv_h(dir)));
+
+			// add the ghost pressure if adjacent cell is air cell
 			if (grid.fluid_map(index2) > -1)
 				trip.push_back(T(fcell_num, grid.fluid_map(index2), 1. * inv_h(dir)));
 			else {
@@ -55,6 +56,7 @@ void solve_pressure_free_surface(Grid& grid) {
 						(grid.Vy[get_idx2(i, j + 1, k, 1)] - grid.Vy[get_idx2(i, j, k, 1)]) / h(1) +
 						(grid.Vz[get_idx2(i, j, k + 1, 2)] - grid.Vz[get_idx2(i, j, k, 2)]) / h(2);
 
+					// all 6 neighbors
 					set_entry(i - 1, j, k, 0);
 					set_entry(i + 1, j, k, 0);
 					set_entry(i, j - 1, k, 1);
@@ -76,6 +78,7 @@ void solve_pressure_free_surface(Grid& grid) {
 	cg.compute(A.transpose() * A);
 	Eigen::VectorXd temp_p = cg.solve(A.transpose() * div);
 
+	// set the pressure for fluid cells
 	grid.pressure.setZero();
 	for (i = 0; i < nx; i++) {
 		for (j = 0; j < ny; j++) {

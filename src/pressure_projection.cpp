@@ -1,6 +1,4 @@
 #include <pressure_projection.h>
-#include <iostream>
-
 
 void pressure_projection(Grid& grid) {
 	int nx = grid.nx;

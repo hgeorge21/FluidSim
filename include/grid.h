@@ -14,16 +14,18 @@ class Grid {
 public:
 	double dt;
 	double density = 1.0;
-	int theta; // for FLIP / PIC blend
+	int theta = 10; // for FLIP / PIC blend
+	bool use_RK2_advection = true;
 
 	Eigen::RowVector3d h;
-	Eigen::RowVector3d left_lower_corner;
+	Eigen::RowVector3d g;
+	Eigen::RowVector3d left_lower_corner; 
 	Eigen::RowVector3d right_upper_corner;
 
 	int num_fluid_cells;
 	int nx, ny, nz, n_grids;
 	Eigen::VectorXd Vx, Vy, Vz;
-	Eigen::VectorXd pressure;   // nx1 the pressure at each grid
+	Eigen::VectorXd pressure;   // nx1 the pressure at each cell
 	Eigen::VectorXi markers;    // nx1 marks the type of the cell
 	Eigen::SparseMatrix<double> A;
 
@@ -31,19 +33,27 @@ public:
 	Eigen::VectorXi fluid_map; // mapping grid to fluid index
 	Eigen::VectorXd Vx_, Vy_, Vz_; // saved grid velocity
 
-	Grid(double dt_, const Eigen::Vector3d& corner1, const Eigen::Vector3d& corner2, double h_, int blend_weight)
-		:dt(dt_), left_lower_corner(corner1), right_upper_corner(corner2), h(h_* Eigen::Vector3d::Ones()), theta(blend_weight)
+	Grid(double dt_, const Eigen::Vector3d& corner1, const Eigen::Vector3d& corner2, const Eigen::Vector3d& gravity, double h_)
+		:dt(dt_), left_lower_corner(corner1), right_upper_corner(corner2), g(gravity), h(h_* Eigen::Vector3d::Ones())
 	{}
 
-	Grid(double dt_, const Eigen::Vector3d& corner1, const Eigen::Vector3d& corner2, const Eigen::Vector3d& h_, int blend_weight)
-		:dt(dt_), left_lower_corner(corner1), right_upper_corner(corner2), h(h_), theta(blend_weight)
+	Grid(double dt_, const Eigen::Vector3d& corner1, const Eigen::Vector3d& corner2, const Eigen::Vector3d& gravity, const Eigen::Vector3d& h_)
+		:dt(dt_), left_lower_corner(corner1), right_upper_corner(corner2), g(gravity), h(h_)
 	{}
 
+	// initialize data structures
+	void init();
+
+	// gets the grid index give x, y, z positions
 	int get_idx(const int& xi, const int& yi, const int& zi);
 
-	void init();
+	// generates the free surface, phi, between liquid and air with kernel smoothing
 	void create_free_boundary(Particle &particles);
+	
+	// apply boundary condition and filters out velocity on solid cells
 	void apply_boundary_condition();
+
+	// save the velocities for FLIP
 	void save_grids();
 
 private:

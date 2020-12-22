@@ -27,6 +27,7 @@ void solve_pressure(Grid& grid) {
 	int idx;
 	int i, j, k;
 
+	// set entry for a cell
 	const auto& set_entry = [&](const int &xi, const int &yi, const int &zi, const int &dir) {
 		int index2 = get_idx(xi, yi, zi);
 		if (grid.markers[index2] != SOLIDCELL)

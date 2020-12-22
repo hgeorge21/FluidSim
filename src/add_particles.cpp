@@ -4,7 +4,14 @@
 #include <chrono>
 #include <random>
 
-void add_particles(Grid& grid, Particle& particles, const Eigen::RowVector3d& v1, const Eigen::RowVector3d& v2, const Eigen::RowVector3d& hf, const int &n_per_cell) {
+void add_particles(
+	Grid& grid, 
+	Particle& particles, 
+	const Eigen::RowVector3d& v1, 
+	const Eigen::RowVector3d& v2, 
+	const Eigen::RowVector3d& hf, 
+	const int &n_per_cell) {
+
 	// calculate for fluids
 	Eigen::RowVector3d ns = (v2 - v1).cwiseQuotient(hf);
 	int nx_ = ceil(ns(0));
@@ -20,6 +27,7 @@ void add_particles(Grid& grid, Particle& particles, const Eigen::RowVector3d& v1
 	int nx_f = nx_;
 	int nz_f = nz_;
 
+	// loop over specified cells
 	int n_fluid_grids = nx_f * ny_f * nz_f;
 	particles.q = Eigen::MatrixXd(n_per_cell * n_fluid_grids, 3);
 	particles.v = Eigen::MatrixXd::Zero(n_per_cell * n_fluid_grids, 3);
@@ -44,12 +52,18 @@ void add_particles(Grid& grid, Particle& particles, const Eigen::RowVector3d& v1
 }
 
 
-void add_particles(Grid& grid, Particle& particles, const Eigen::RowVector3d& v1, const Eigen::RowVector3d& v2, const Eigen::RowVector3d& hf, const int& n_per_cell,
-	const Eigen::MatrixXd& V, const Eigen::MatrixXi& F) {
+void add_particles(
+	Grid& grid, 
+	Particle& particles, 
+	const Eigen::RowVector3d& v1, 
+	const Eigen::RowVector3d& v2, 
+	const Eigen::RowVector3d& hf, 
+	const int& n_per_cell,
+	const Eigen::MatrixXd& V, 
+	const Eigen::MatrixXi& F) {
 
 	Eigen::MatrixXd tmp;
 	sample_from_mesh(V, F, 10000, tmp);
-
 
 	Eigen::RowVector3d ns = (v2 - v1).cwiseQuotient(hf);
 	int nx_ = ceil(ns(0));
@@ -65,6 +79,7 @@ void add_particles(Grid& grid, Particle& particles, const Eigen::RowVector3d& v1
 	int nx_f = nx_;
 	int nz_f = nz_;
 
+	// loop over specified cells
 	int n_fluid_grids = nx_f * ny_f * nz_f;
 	particles.q = Eigen::MatrixXd(n_per_cell * n_fluid_grids + tmp.rows(), 3);
 	particles.v = Eigen::MatrixXd::Zero(n_per_cell * n_fluid_grids + tmp.rows(), 3);
@@ -86,7 +101,8 @@ void add_particles(Grid& grid, Particle& particles, const Eigen::RowVector3d& v1
 			}
 		}
 	}
-
+	
+	// add the input mesh
 	particles.q.block(n_per_cell * n_fluid_grids, 0, tmp.rows(), 3) = tmp;
 	particles.type.block(n_per_cell * n_fluid_grids, 0, tmp.rows(), 1).setConstant(FLUID_P);
 }

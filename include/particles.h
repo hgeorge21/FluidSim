@@ -3,7 +3,6 @@
 
 #include <Eigen/Core>
 
-
 class Particle
 {
 
@@ -14,11 +13,6 @@ public:
 	Eigen::MatrixXd q; // location
 	Eigen::MatrixXd v; // velocity
 	Eigen::VectorXi type; // type of particle (only fluids right now)
-
-	// For APIC
-	Eigen::MatrixXd cx; 
-	Eigen::MatrixXd cy; 
-	Eigen::MatrixXd cz; 
 
 	Particle() {};
 	~Particle() {};

@@ -1,7 +1,5 @@
 #include <transfer_to_grid.h>
 #include <interpolate.h>
-#include <timer.h>
-#include <iostream>
 
 void transfer_to_grid(Grid& grid, Particle& particles) {
 	Eigen::SparseMatrix<double> Wx, Wy, Wz;

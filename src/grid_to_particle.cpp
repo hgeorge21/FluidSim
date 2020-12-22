@@ -1,8 +1,6 @@
 #include <grid_to_particle.h>
 #include <interpolate.h>
 
-#include <iostream>
-
 void grid_to_particle_velocity_update(Grid& grid, Particle& particles) {
 	Eigen::SparseMatrix<double> Wx, Wy, Wz;
 	Eigen::VectorXd Vx1, Vy1, Vz1;
@@ -39,20 +37,14 @@ void grid_to_particle_velocity_update(Grid& grid, Particle& particles) {
 	interpolate(grid.nx, grid.ny, grid.nz, 2, h, corner, particles.q, sum, Wz);
 	
 	if (grid.theta == 0) {
-		Vx1 = Wx * Vx1;
-		Vy1 = Wy * Vy1;
-		Vz1 = Wz * Vz1;
-		particles.v.col(0) = Vx1;
-		particles.v.col(1) = Vy1;
-		particles.v.col(2) = Vz1;
+		particles.v.col(0) = Wx * Vx1;
+		particles.v.col(1) = Wy * Vy1;
+		particles.v.col(2) = Wz * Vz1;
 	}
 	else if (grid.theta == 10) {
-		Vx2 = Wx * Vx2;
-		Vy2 = Wy * Vy2;
-		Vz2 = Wz * Vz2;
-		particles.v.col(0) += Vx2;
-		particles.v.col(1) += Vy2;
-		particles.v.col(2) += Vz2;
+		particles.v.col(0) += Wx * Vx2;
+		particles.v.col(1) += Wy * Vy2;
+		particles.v.col(2) += Wz * Vz2;
 	}
 	else {
 		Vx1 = Wx * Vx1;

@@ -23,7 +23,7 @@
 int main(int argc, char** argv) {
 	igl::opengl::glfw::Viewer viewer;
 	const int fluidID = viewer.selected_data_index;
-	viewer.data().point_size = 5;
+	viewer.data().point_size = 3;
 	viewer.append_mesh();
 	igl::ColorMapType cmap_type = igl::COLOR_MAP_TYPE_MAGMA;
 
@@ -37,9 +37,10 @@ int main(int argc, char** argv) {
   R,r     Resets the simulation
   M,m     Toggle between free surface or without
   F,f     Toggle between FLIP and PIC or a blend
+  K,k     Toggle between simple update and RK2 for advection
   C       Increase weighting of PIC by 0.1 in PIC/FLIP blend
   c       Decrease weighting of PIC by 0.1 in PIC/FLIP blend
- 
+  Q,q     Run for 100 frames
   To run continuously, start the program with any argument.
     )";
 	std::cout << "\n";
@@ -50,27 +51,25 @@ int main(int argc, char** argv) {
 	Eigen::MatrixXd CM;
 
 	double dt = 0.1;
-	double height = 0.3;
 	Eigen::Vector3d h = Eigen::Vector3d(0.1, 0.1, 0.1);
 	Eigen::Vector3d gravity = Eigen::Vector3d(0, -0.5, 0);
 	Eigen::Vector3d left_lower_corner = Eigen::Vector3d(-1.0, -1.0, -1.0);
 	Eigen::Vector3d right_upper_corner = Eigen::Vector3d(1.0, 1.0, 1.0);
 
-	Eigen::Vector3d fluid_v1 = Eigen::Vector3d(-0.3, -0.9, -0.3);
-	Eigen::Vector3d fluid_v2 = Eigen::Vector3d(0.3, 0.1, 0.3);
+	Eigen::Vector3d fluid_v1 = Eigen::Vector3d(-0.6, -0.9, -0.6);
+	Eigen::Vector3d fluid_v2 = Eigen::Vector3d(0.6, 0.3, 0.6);
 	Eigen::Vector3d fluid_hf = Eigen::Vector3d(0.05, 0.05, 0.05);
 
 	// for visualizing boundary
 	create_rectangle(left_lower_corner + h, right_upper_corner - h, V, F);
 	Particle particles;
-	Grid grid(dt, left_lower_corner, right_upper_corner, h, 0);
+	Grid grid(dt, left_lower_corner, right_upper_corner, gravity, h);
 
 	Eigen::MatrixXd Vr;
 	Eigen::MatrixXi Fr;
-	igl::read_triangle_mesh("../data/bunny.off", Vr, Fr);
+	igl::read_triangle_mesh((argc > 1 ? argv[1] : "../data/bunny.off"), V, F);
 	Vr = 3 * Vr;
 	Vr.col(1) = Vr.col(1) + Eigen::VectorXd::Constant(Vr.rows(), 0.3);
-
 
 	const auto& setup = [&]() {
 		// create grid and add particles
@@ -113,14 +112,17 @@ int main(int argc, char** argv) {
 
 	const auto& update_forever = [&]() {
 		int i = 0;
-		while (true) {
-			//std::cerr << "======================" << std::endl;
-			//std::cout << "Step " << i << std::endl;
-			//std::cerr << timer(update) << " seconds" << std::endl;
+		for(i = 0; i < 150; i++) {
 			update();
 			i++;
 		}
 	};
+
+	const auto& detach = [&]() {
+		std::thread simulation_thread(update_forever);
+		simulation_thread.detach();
+	};
+
 
 	viewer.callback_key_pressed = [&](igl::opengl::glfw::Viewer&, unsigned int key, int mod)
 	{
@@ -165,6 +167,14 @@ int main(int argc, char** argv) {
 			grid.theta = std::max(0, grid.theta + 1);
 			std::cout << "PIC/FLIP weighting is: " << 1. - 0.1*grid.theta << "/" << 0.1*grid.theta << std::endl;
 			break;
+		case 'K':
+		case 'k':
+			grid.use_RK2_advection = !grid.use_RK2_advection;
+			std::cout << "Using " << ((grid.use_RK2_advection) ? "RK2" : "Simple update") << " for advection" << std::endl;
+		case 'Q':
+		case 'q':
+			detach();
+			break;
 		default:
 			return false;
 		}
@@ -173,11 +183,9 @@ int main(int argc, char** argv) {
 
 	setup();
 	show_particles();
+	std::cout << "Using " << ((grid.theta == 0) ? "PIC" : (grid.theta == 10) ? "FLIP" : "Blend") << std::endl;
+	std::cout << "Using " << ((grid.use_RK2_advection) ? "RK2" : "Simple update") << " for advection" << std::endl;
 
-	if (argc > 1) {
-		std::thread simulation_thread(update_forever);
-		simulation_thread.detach();
-	}
 
 	// start the viewer and set the mesh
 	viewer.data().set_mesh(V, F);

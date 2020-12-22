@@ -3,6 +3,7 @@
 
 #include <Eigen/Core>
 
+// Create a rectange mesh given corners
 void create_rectangle(
 	const Eigen::Vector3d &left_lower_corner,
 	const Eigen::Vector3d &right_upper_corner,

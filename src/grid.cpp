@@ -1,7 +1,7 @@
 #include <grid.h>
 #include <chrono>
 #include <random>
-#include <iostream>
+
 
 void Grid::init() {
 	// calculate number of cells in each dimension
@@ -17,6 +17,13 @@ void Grid::init() {
 	phi = Eigen::VectorXd::Zero(n_grids);
 	fluid_map = Eigen::VectorXi::Zero(n_grids);
 	markers = Eigen::VectorXi::Constant(n_grids, AIRCELL);
+
+	Vx = Eigen::VectorXd::Zero((nx + 1) * ny * nz);
+	Vy = Eigen::VectorXd::Zero(nx * (ny + 1) * nz);
+	Vz = Eigen::VectorXd::Zero(nx * ny * (nz + 1));
+	Vx_ = Eigen::VectorXd::Zero((nx + 1) * ny * nz);
+	Vy_ = Eigen::VectorXd::Zero(nx * (ny + 1) * nz);
+	Vz_ = Eigen::VectorXd::Zero(nx * ny * (nz + 1));
 }
 
 int Grid::get_idx(const int& xi, const int& yi, const int& zi) {
@@ -82,71 +89,8 @@ void Grid::save_grids() {
 void Grid::create_free_boundary(Particle &particles) {
 	phi.setZero();
 	fluid_map.setConstant(-1);
-
-	/*
-	phi.setConstant(n_grids, std::numeric_limits<double>::max());
-	int counter = 0;
-	const auto& ks = [](double x) -> double { return std::max(0., pow(1 - x * x, 3)); };
-
-	// initialize the arrays near the near geometry
-	int i, j, k;
-	Eigen::MatrixXd X = Eigen::MatrixXd::Zero(n_grids, 3);
-	Eigen::VectorXd w = Eigen::VectorXd::Zero(n_grids);
-	Eigen::VectorXd r = Eigen::VectorXd::Zero(n_grids);
-
-	Eigen::RowVector3d x;
-	Eigen::RowVector3d ids;
-	const auto& add_stuff = [&](const int& xi, const int& yi, const int& zi) {
-		if (xi < 1 || xi > nx - 2)
-			return;
-		if (yi < 1 || yi > ny - 2)
-			return;
-		if (zi < 1 || zi > nz - 2)
-			return;
-		int grid_id = get_idx(xi, yi, zi);
-		Eigen::RowVector3d p = left_lower_corner + ids.cwiseProduct(h) + 0.5 * h; // pressure point coordinates
-
-		double wi = ks(0.5 * (x - p).norm() / h.maxCoeff());
-		X.row(grid_id) += wi * x;
-		r(grid_id) += wi * 0.5 * h.maxCoeff(); // should modify this
-		w(grid_id) += wi;
-	};
-
-	for (int l = 0; l < particles.q.rows(); l++) {
-		x = particles.q.row(l);
-		ids = (x - left_lower_corner).cwiseQuotient(h);
-		ids = ids.unaryExpr([](double x) { return floor(x); });
-
-		for (int i0 = -1; i0 <= 1; i0++) {
-			for (int j0 = -1; j0 <= 1; j0++) {
-				for (int k0 = -1; k0 <= 1; k0++) {
-					add_stuff(int(ids(0)) + i0, int(ids(1)) + j0, int(ids(2)) + k0);
-				}
-			}
-		}
-	}
-
-	for (int i = 1; i < nx - 1; i++) {
-		for (int j = 1; j < ny - 1; j++) {
-			for (int k = 1; k < nz - 1; k++) {
-				int grid_id = get_idx(i, j, k);
-				if (w(grid_id) != 0) {
-					X.row(grid_id) = X.row(grid_id) / w(grid_id);
-					r(grid_id) = r(grid_id) / w(grid_id);
-
-					Eigen::RowVector3d p = left_lower_corner + Eigen::RowVector3d(i + 0.5, j + 0.5, k + 0.5).cwiseProduct(h);
-					phi(grid_id) = (p - X.row(grid_id)).norm() - r(grid_id);
-					if (phi(grid_id) < 0) {
-						fluid_map(grid_id) = counter;
-						counter++;
-					}
-				}
-			}
-		}
-	}*/
-
 	
-	// get smoothing kernel coefficients
+	// get smoothing kernel coefficients (3x3x3 Gaussian)
 	double c[4];
 	c[0] = 1.0;
 	c[1] = exp(-1.);
@@ -180,8 +124,5 @@ void Grid::create_free_boundary(Particle &particles) {
 					counter++;
 				}
 			}
-	
-
-
 	num_fluid_cells = counter;
 }
