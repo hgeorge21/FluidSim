@@ -1,8 +1,10 @@
-# MultiFLIP
+# PIC/FLIP Simulation
 
 Implemented by Yongzhen Huang and Gongyi Shi.
 
-Based on the paper [*MultiFLIP for Energetic Two-Phase Fluid Simulation*](https://www.cs.ubc.ca/~rbridson/docs/boyd-tog2011-multiflip.pdf).
+Based on the paper [*Animating Sand as a Fluid*](https://www.cs.ubc.ca/~rbridson/docs/zhu-siggraph05-sandfluid.pdf).
+
+A video presenting our work can be found [here](https://www.dropbox.com/s/6ewmlhst6lxcsgc/FLUID_SIM_PRESENTATION.mp4?dl=0).
 
 
 ## How to build
@@ -22,4 +24,12 @@ cd build
 cmake -DCMAKE_BUILD_TYPE=Release ..
 ```
 
-## MORE TO COME!!
+## Running the program
+Simply execute the program 
+```
+./Fluid_Sim [path to triangle mesh]
+```
+
+Optional parameter of path to a triangle mesh shows the object falling into the fluid.
+
+Program options are shown immediately afterwards.
