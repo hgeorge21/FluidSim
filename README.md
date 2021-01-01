@@ -33,9 +33,3 @@ Simply execute the program
 Optional parameter of path to a triangle mesh shows the object falling into the fluid.
 
 Program options are shown immediately afterwards.
-
-
-## Original Paper code and reference book
-https://github.com/WindQAQ/MPM/blob/master/src/mpm_solver.cu
-
-https://www.seas.upenn.edu/~cffjiang/research/mpmcourse/mpmcourse.pdf
